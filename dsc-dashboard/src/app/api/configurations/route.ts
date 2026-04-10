@@ -2,18 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { cacheGet, cacheSet, cacheInvalidate } from "@/lib/redis";
 import { parseDSCDocument } from "@/lib/dsc-parser";
-import { DEMO_USER_ID } from "@/lib/demo-data";
+import { resolveInfraContext } from "@/lib/tenant-resolver";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const ctx = await resolveInfraContext();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
 
-    const cacheKey = `configs:${status || "all"}`;
+    const cacheKey = `configs:${ctx.userId}:${status || "all"}`;
     const cached = await cacheGet(cacheKey);
     if (cached) return NextResponse.json(cached);
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { userId: ctx.userId };
     if (status) where.status = status;
 
     const configs = await prisma.configuration.findMany({
@@ -36,39 +38,25 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const user = await getCurrentUser();
+    const userId = user?.id || "demo-user-001";
 
-    // Validate DSC document if provided as string
+    const body = await req.json();
     let document = body.document;
     if (typeof document === "string") {
       const parsed = parseDSCDocument(document);
-      if (!parsed.success) {
-        return NextResponse.json({ error: parsed.error }, { status: 400 });
-      }
+      if (!parsed.success) return NextResponse.json({ error: parsed.error }, { status: 400 });
       document = parsed.data;
     }
 
     const config = await prisma.configuration.create({
-      data: {
-        name: body.name,
-        description: body.description,
-        document: document as object,
-        status: body.status || "DRAFT",
-        userId: DEMO_USER_ID,
-      },
+      data: { name: body.name, description: body.description, document: document as object, status: body.status || "DRAFT", userId },
     });
 
-    // Create resource instances from the document
     if (document?.resources) {
       for (const res of document.resources as Array<{ name: string; type: string; properties?: object }>) {
         await prisma.resourceInstance.create({
-          data: {
-            name: res.name,
-            resourceType: res.type,
-            properties: (res.properties || {}) as object,
-            desiredState: (res.properties || {}) as object,
-            configurationId: config.id,
-          },
+          data: { name: res.name, resourceType: res.type, properties: (res.properties || {}) as object, desiredState: (res.properties || {}) as object, configurationId: config.id },
         });
       }
     }

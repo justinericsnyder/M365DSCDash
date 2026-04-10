@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { cacheGet, cacheSet, cacheInvalidate } from "@/lib/redis";
-import { DEMO_USER_ID } from "@/lib/demo-data";
+import { resolveInfraContext } from "@/lib/tenant-resolver";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const ctx = await resolveInfraContext();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const platform = searchParams.get("platform");
     const search = searchParams.get("search");
 
-    const cacheKey = `nodes:${status || "all"}:${platform || "all"}:${search || ""}`;
+    const cacheKey = `nodes:${ctx.userId}:${status || "all"}:${platform || "all"}:${search || ""}`;
     const cached = await cacheGet(cacheKey);
     if (cached) return NextResponse.json(cached);
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { userId: ctx.userId };
     if (status) where.status = status;
     if (platform) where.platform = platform;
     if (search) {
@@ -27,9 +29,7 @@ export async function GET(req: NextRequest) {
     const nodes = await prisma.node.findMany({
       where,
       include: {
-        configurations: {
-          include: { configuration: { select: { name: true, status: true } } },
-        },
+        configurations: { include: { configuration: { select: { name: true, status: true } } } },
         _count: { select: { driftEvents: true } },
       },
       orderBy: { updatedAt: "desc" },
@@ -45,15 +45,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await getCurrentUser();
+    const userId = user?.id || "demo-user-001";
+
     const body = await req.json();
     const node = await prisma.node.create({
-      data: {
-        name: body.name,
-        hostname: body.hostname,
-        platform: body.platform,
-        tags: body.tags || [],
-        userId: DEMO_USER_ID,
-      },
+      data: { name: body.name, hostname: body.hostname, platform: body.platform, tags: body.tags || [], userId },
     });
     await cacheInvalidate("nodes:*");
     await cacheInvalidate("dashboard:*");
