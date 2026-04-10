@@ -20,6 +20,23 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: "2.2.0",
+    date: "April 10, 2026",
+    type: "feature",
+    title: "Enhanced Drift Events — Per-Property Breakdown with Plain-Language Explanations",
+    description: "Each drift event now shows exactly which settings don't match, with admin-friendly explanations of what the setting does, why it matters, and what to do about it.",
+    icon: Sparkles,
+    details: [
+      "Per-property breakdown: each differing property gets its own card with desired vs actual values side-by-side",
+      "Plain-language explanations for 30+ common M365/Purview/DSC settings (Conditional Access state, SharePoint sharing, Teams anonymous join, Purview encryption, etc.)",
+      "Three-part context for each drift: Description (what the setting does), Risk (what could go wrong), Recommendation (what to do)",
+      "Visual drift direction arrow: shows the value change from desired → actual",
+      "Red left border on unresolved drift events for quick visual scanning",
+      "Collapsed view shows property badges, expanded view shows full detail cards",
+      "Generic fallback explanations for unknown properties",
+    ],
+  },
+  {
     version: "2.1.0",
     date: "April 10, 2026",
     type: "feature",
