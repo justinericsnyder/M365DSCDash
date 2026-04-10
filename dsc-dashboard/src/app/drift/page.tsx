@@ -219,6 +219,12 @@ export default function DriftPage() {
                                   <p className="text-sm text-dsc-text-secondary">{explanation.recommendation}</p>
                                 </div>
                               </div>
+                              {explanation.docUrl && (
+                                <a href={explanation.docUrl} target="_blank" rel="noopener noreferrer"
+                                  className="flex items-center gap-1.5 text-xs text-dsc-blue hover:underline mt-1 pl-6">
+                                  📖 Microsoft Documentation →
+                                </a>
+                              )}
                             </div>
                           </div>
                         </div>

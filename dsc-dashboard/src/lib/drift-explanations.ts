@@ -1,196 +1,228 @@
-// Plain-language explanations for common M365/Purview/DSC drift properties
-// Helps admins understand what changed, why it matters, and what to do
+// Plain-language explanations sourced from official Microsoft documentation
+// Each entry includes a docUrl linking to the authoritative Microsoft Learn page
 
 interface DriftExplanation {
   setting: string;
   description: string;
   risk: string;
   recommendation: string;
+  docUrl?: string;
 }
 
 const explanations: Record<string, DriftExplanation> = {
-  // ─── Conditional Access / AAD ─────────────────────────
+  // ─── Conditional Access / Entra ID ────────────────────
+  // Source: https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-report-only
   "State": {
-    setting: "Policy Enforcement State",
-    description: "Controls whether a Conditional Access policy is actively enforced, in report-only mode, or disabled.",
-    risk: "A policy in report-only or disabled state is not protecting your organization. Users can bypass the intended security controls.",
-    recommendation: "Set to 'enabled' to enforce the policy. Use report-only temporarily during testing only.",
+    setting: "Conditional Access Policy State",
+    description: "Conditional Access policies have three states: On, Off, and Report-only. Report-only mode allows administrators to evaluate the impact of policies before enabling them. Policies in report-only are evaluated during sign-in but not enforced.",
+    risk: "A policy in report-only or disabled state is not enforcing its security controls. Sign-ins that should be blocked or require MFA will be allowed through without restriction.",
+    recommendation: "Move policies from report-only to 'On' after validating impact via sign-in logs. Keep break-glass accounts excluded.",
+    docUrl: "https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-report-only",
   },
   "state": {
-    setting: "Policy Enforcement State",
-    description: "Controls whether a Conditional Access policy is actively enforced, in report-only mode, or disabled.",
-    risk: "A policy in report-only or disabled state is not protecting your organization. Users can bypass the intended security controls.",
-    recommendation: "Set to 'enabled' to enforce the policy. Use report-only temporarily during testing only.",
+    setting: "Conditional Access Policy State",
+    description: "Conditional Access policies have three states: On, Off, and Report-only. Report-only mode allows administrators to evaluate the impact of policies before enabling them. Policies in report-only are evaluated during sign-in but not enforced.",
+    risk: "A policy in report-only or disabled state is not enforcing its security controls. Sign-ins that should be blocked or require MFA will be allowed through without restriction.",
+    recommendation: "Move policies from report-only to 'On' after validating impact via sign-in logs. Keep break-glass accounts excluded.",
+    docUrl: "https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-report-only",
   },
+  // Source: https://learn.microsoft.com/en-us/entra/fundamentals/concept-group-based-licensing
   "EnableGroupCreation": {
     setting: "Self-Service Group Creation",
-    description: "Controls whether regular users can create Microsoft 365 groups and Teams without admin approval.",
-    risk: "When enabled, users can create unlimited groups/Teams, leading to sprawl, data exposure, and governance challenges.",
-    recommendation: "Disable self-service group creation and restrict it to a security group of approved users.",
+    description: "Controls whether users can create Microsoft 365 groups (which also creates Teams, SharePoint sites, and Planner plans). When enabled, any user can create groups without admin approval.",
+    risk: "Unrestricted group creation leads to sprawl — hundreds of unused groups, duplicate Teams, and unmanaged SharePoint sites with potentially sensitive data.",
+    recommendation: "Restrict group creation to a designated security group. Configure naming policies and expiration policies for governance.",
+    docUrl: "https://learn.microsoft.com/en-us/entra/identity/users/groups-self-service-management",
   },
-  "BlockMsolPowerShell": {
-    setting: "Legacy PowerShell Access",
-    description: "Controls whether the legacy MSOL PowerShell module can connect to your tenant.",
-    risk: "Legacy PowerShell modules don't support modern auth and can be exploited by attackers to bypass Conditional Access.",
-    recommendation: "Block MSOL PowerShell access. Use Microsoft Graph PowerShell SDK instead.",
-  },
+  // Source: https://learn.microsoft.com/en-us/entra/identity/users/users-restrict-guest-permissions
   "AllowInvitesFrom": {
-    setting: "Guest Invitation Policy",
-    description: "Controls who in your organization can invite external guests.",
-    risk: "If set to 'everyone', any user can invite external guests, potentially exposing sensitive data to unauthorized parties.",
-    recommendation: "Restrict to 'adminsAndGuestInviters' or 'adminsGuestInvitersAndAllMembers' based on your security posture.",
+    setting: "Guest Invitation Settings",
+    description: "Controls who in your organization can invite guest users to your Microsoft Entra tenant. Options range from 'everyone' (any user can invite) to 'none' (only admins).",
+    risk: "If set to 'everyone', any employee can invite external guests who then gain access to Teams, SharePoint, and other resources based on your sharing policies.",
+    recommendation: "Set to 'adminsAndGuestInviters' to limit invitations to admins and users in the Guest Inviter role.",
+    docUrl: "https://learn.microsoft.com/en-us/entra/identity/users/users-restrict-guest-permissions",
   },
-  "IsEnabled": {
-    setting: "Feature Enabled/Disabled",
-    description: "Controls whether a security feature or policy is active.",
-    risk: "Disabling security features removes a layer of protection from your environment.",
-    recommendation: "Keep security features enabled unless there's a documented business reason to disable them.",
-  },
-  "isEnabled": {
-    setting: "Feature Enabled/Disabled",
-    description: "Controls whether a security feature or policy is active.",
-    risk: "Disabling security features removes a layer of protection from your environment.",
-    recommendation: "Keep security features enabled unless there's a documented business reason to disable them.",
+  // Source: https://learn.microsoft.com/en-us/powershell/module/microsoft.graph.identity.signins/update-mgpolicyauthorizationpolicy
+  "BlockMsolPowerShell": {
+    setting: "Block Legacy MSOL PowerShell",
+    description: "Controls whether the legacy MSOnline (MSOL) PowerShell module can authenticate to your tenant. The MSOL module uses legacy authentication that bypasses Conditional Access policies.",
+    risk: "Attackers can use MSOL PowerShell to authenticate with stolen credentials while bypassing MFA and Conditional Access policies that protect interactive sign-ins.",
+    recommendation: "Set to true to block MSOL PowerShell. Migrate scripts to Microsoft Graph PowerShell SDK which supports modern authentication.",
+    docUrl: "https://learn.microsoft.com/en-us/entra/identity/users/users-default-permissions",
   },
 
   // ─── SharePoint / OneDrive ────────────────────────────
+  // Source: https://learn.microsoft.com/en-us/sharepoint/turn-external-sharing-on-or-off
   "SharingCapability": {
-    setting: "External Sharing Level",
-    description: "Controls how broadly SharePoint and OneDrive content can be shared with people outside your organization.",
-    risk: "Overly permissive sharing (e.g., 'ExternalUserAndGuestSharing') allows anyone with a link to access your files, including anonymous users.",
-    recommendation: "Set to 'ExternalUserSharingOnly' or 'Disabled' to require authentication for external access.",
+    setting: "SharePoint External Sharing Level",
+    description: "Controls the organization-level external sharing setting for SharePoint and OneDrive. Levels from most to least permissive: Anyone (anonymous links), New and existing guests, Existing guests only, Only people in your organization.",
+    risk: "'ExternalUserAndGuestSharing' (Anyone) allows anonymous access links — anyone with the link can access files without authentication. This is the most common cause of accidental data exposure.",
+    recommendation: "Set to 'ExternalUserSharingOnly' (New and existing guests) which requires authentication. Use 'Disabled' for highly sensitive tenants.",
+    docUrl: "https://learn.microsoft.com/en-us/sharepoint/turn-external-sharing-on-or-off",
   },
+  // Source: https://learn.microsoft.com/en-us/sharepoint/turn-external-sharing-on-or-off
   "PreventExternalUsersFromResharing": {
-    setting: "External Resharing Prevention",
-    description: "Controls whether external users who receive shared content can reshare it with others.",
-    risk: "When disabled, external users can forward your shared content to anyone, creating an uncontrolled chain of access.",
-    recommendation: "Enable this setting to prevent external users from resharing your organization's content.",
+    setting: "Prevent External Resharing",
+    description: "When enabled, external users who receive shared content cannot reshare it with additional people. This prevents a chain of sharing beyond your original intent.",
+    risk: "Without this control, an external user you share a document with can forward that sharing link to anyone else, creating uncontrolled access to your organization's content.",
+    recommendation: "Enable this setting to maintain control over who can access externally shared content.",
+    docUrl: "https://learn.microsoft.com/en-us/sharepoint/turn-external-sharing-on-or-off",
   },
   "IsResharingByExternalUsersEnabled": {
-    setting: "External Resharing",
-    description: "Controls whether external users can reshare content they've been given access to.",
-    risk: "Allowing resharing means your content can spread beyond the people you originally shared it with.",
-    recommendation: "Disable external resharing to maintain control over who can access your content.",
+    setting: "External User Resharing",
+    description: "Controls whether external users can reshare content they have been given access to in SharePoint and OneDrive.",
+    risk: "Allowing resharing means your content can spread beyond the people you originally shared it with, without your knowledge or consent.",
+    recommendation: "Set to false to prevent external users from resharing your organization's content.",
+    docUrl: "https://learn.microsoft.com/en-us/sharepoint/turn-external-sharing-on-or-off",
   },
 
   // ─── Teams ────────────────────────────────────────────
+  // Source: https://learn.microsoft.com/en-us/microsoftteams/anonymous-users-in-meetings
   "AllowAnonymousUsersToJoinMeeting": {
-    setting: "Anonymous Meeting Join",
-    description: "Controls whether people without a Microsoft account can join Teams meetings.",
-    risk: "Anonymous users can join meetings without identity verification, potentially eavesdropping on sensitive discussions.",
-    recommendation: "Disable anonymous join for sensitive meetings. Use lobby controls to screen attendees.",
+    setting: "Anonymous Meeting Participants",
+    description: "Controls whether people who aren't logged into a Microsoft account can join Teams meetings. Anonymous users join without identity verification and appear as 'Guest' in the participant list.",
+    risk: "Anonymous participants cannot be identified or audited. They could eavesdrop on sensitive discussions, capture shared screens, or disrupt meetings.",
+    recommendation: "Disable for sensitive meetings. Use the lobby to screen anonymous participants when enabled. Consider Teams Premium for one-time passcode verification.",
+    docUrl: "https://learn.microsoft.com/en-us/microsoftteams/anonymous-users-in-meetings",
   },
+  // Source: https://learn.microsoft.com/en-us/microsoftteams/configure-lobby-sensitive-meetings
   "AutoAdmittedUsers": {
-    setting: "Meeting Auto-Admit Policy",
-    description: "Controls who is automatically admitted to Teams meetings without waiting in the lobby.",
-    risk: "Setting to 'Everyone' bypasses the lobby for all participants including external and anonymous users.",
-    recommendation: "Set to 'EveryoneInCompanyExcludingGuests' to require lobby approval for external participants.",
-  },
-  "AllowCloudRecording": {
-    setting: "Meeting Cloud Recording",
-    description: "Controls whether Teams meetings can be recorded and stored in the cloud.",
-    risk: "Recordings may contain sensitive information. Without proper controls, recordings could be accessed by unauthorized users.",
-    recommendation: "Enable with appropriate retention and access policies. Ensure recordings are stored in compliant locations.",
+    setting: "Meeting Lobby Bypass",
+    description: "Controls who is automatically admitted to Teams meetings without waiting in the lobby. Options: Everyone, EveryoneInCompany, EveryoneInCompanyExcludingGuests, EveryoneInSameAndFederatedCompany, OrganizerOnly, InvitedUsers.",
+    risk: "Setting to 'Everyone' bypasses the lobby for all participants including anonymous and external users, removing a key screening control for meeting access.",
+    recommendation: "Set to 'EveryoneInCompanyExcludingGuests' for standard meetings. Use 'OrganizerOnly' or 'InvitedUsers' for sensitive meetings.",
+    docUrl: "https://learn.microsoft.com/en-us/microsoftteams/configure-lobby-sensitive-meetings",
   },
 
   // ─── Exchange Online ──────────────────────────────────
+  // Source: https://learn.microsoft.com/en-us/defender-office-365/anti-malware-policies-configure
   "EnableInternalSenderAdminNotifications": {
-    setting: "Malware Admin Notifications",
-    description: "Controls whether admins receive email notifications when malware is detected in internal messages.",
-    risk: "Without notifications, malware incidents may go undetected, allowing threats to spread within your organization.",
-    recommendation: "Enable admin notifications and set a monitored security mailbox as the recipient.",
+    setting: "Malware Detection Admin Alerts",
+    description: "When enabled, the anti-malware policy sends email notifications to a designated admin address whenever malware is detected in messages from internal senders.",
+    risk: "Without admin notifications, malware incidents from compromised internal accounts may go undetected, allowing threats to spread within your organization before anyone notices.",
+    recommendation: "Enable and configure a monitored security operations mailbox as the notification recipient.",
+    docUrl: "https://learn.microsoft.com/en-us/defender-office-365/anti-malware-policies-configure",
   },
   "InternalSenderAdminAddress": {
-    setting: "Security Notification Email",
-    description: "The email address that receives security alerts for malware and policy violations.",
-    risk: "An empty or incorrect address means critical security alerts are not being delivered to your security team.",
-    recommendation: "Set to your security operations team's monitored mailbox (e.g., secops@company.com).",
+    setting: "Malware Alert Recipient",
+    description: "The email address that receives admin notifications when the anti-malware policy detects malware from internal senders.",
+    risk: "An empty or incorrect address means critical malware alerts are not being delivered to your security team, delaying incident response.",
+    recommendation: "Set to your security operations team's monitored mailbox (e.g., secops@yourcompany.com).",
+    docUrl: "https://learn.microsoft.com/en-us/defender-office-365/anti-malware-policies-configure",
   },
 
-  // ─── Purview / Sensitivity Labels ─────────────────────
+  // ─── Purview Sensitivity Labels ───────────────────────
+  // Source: https://learn.microsoft.com/en-us/purview/encryption-sensitivity-labels
   "hasProtection": {
-    setting: "Label Encryption Protection",
-    description: "Controls whether a sensitivity label applies encryption to protect content.",
-    risk: "Without encryption, labeled content can be read by anyone who gains access to the file, even if it's marked as confidential.",
-    recommendation: "Enable encryption on Confidential and Highly Confidential labels to protect content at rest and in transit.",
+    setting: "Sensitivity Label Encryption",
+    description: "When a sensitivity label has protection (encryption) enabled, it applies Azure Rights Management encryption to content. This ensures only authorized users can access the content, regardless of where it's stored or shared.",
+    risk: "Without encryption, labeled content can be read by anyone who gains access to the file — the label becomes a visual marker only, with no actual data protection.",
+    recommendation: "Enable encryption on Confidential and Highly Confidential labels. Configure usage rights to control who can view, edit, print, and forward protected content.",
+    docUrl: "https://learn.microsoft.com/en-us/purview/encryption-sensitivity-labels",
   },
+  // Source: https://learn.microsoft.com/en-us/purview/dlp-configure-endpoint-settings
   "isEndpointProtectionEnabled": {
-    setting: "Endpoint DLP Protection",
-    description: "Controls whether endpoint Data Loss Prevention policies are enforced for content with this label.",
-    risk: "Without endpoint DLP, users can copy, print, or transfer labeled content to unauthorized locations from their devices.",
-    recommendation: "Enable endpoint protection for sensitive labels to prevent data exfiltration via copy, print, USB, and network share.",
+    setting: "Endpoint DLP for Sensitivity Label",
+    description: "When enabled, Microsoft Purview endpoint Data Loss Prevention (DLP) enforces policies on devices for content with this label. This controls actions like copy to clipboard, print, upload to cloud, and transfer via USB or network share.",
+    risk: "Without endpoint DLP, users can freely copy, print, or transfer labeled sensitive content to unauthorized locations from their devices, even if the content is encrypted.",
+    recommendation: "Enable endpoint protection for Confidential and Highly Confidential labels. Configure DLP policies to audit or block sensitive actions on endpoints.",
+    docUrl: "https://learn.microsoft.com/en-us/purview/dlp-configure-endpoint-settings",
   },
+  // Source: https://learn.microsoft.com/en-us/purview/sensitivity-labels
   "priority": {
-    setting: "Label Priority Order",
-    description: "Determines the precedence of sensitivity labels. Lower numbers = higher priority.",
-    risk: "Incorrect priority ordering can cause the wrong label to be applied when auto-labeling or when labels conflict.",
-    recommendation: "Ensure labels are ordered from least sensitive (highest number) to most sensitive (lowest number).",
+    setting: "Sensitivity Label Priority",
+    description: "Label priority determines precedence when multiple labels could apply. Labels are ordered in the Microsoft Purview portal from least sensitive (lowest priority number) to most sensitive (highest priority number). The most restrictive label wins.",
+    risk: "Incorrect priority ordering can cause auto-labeling to apply the wrong sensitivity level, or prevent users from upgrading to a more restrictive label when needed.",
+    recommendation: "Order labels from least to most sensitive: Public (0) → General (1) → Confidential (4) → Highly Confidential (8). Ensure sublabel priorities fall within their parent's range.",
+    docUrl: "https://learn.microsoft.com/en-us/purview/sensitivity-labels",
   },
+  // Source: https://learn.microsoft.com/en-us/purview/sensitivity-labels
   "applicableTo": {
-    setting: "Label Scope",
-    description: "Controls which content types (email, files, sites, Teams) a sensitivity label can be applied to.",
-    risk: "Expanding scope without review may apply protection to content types that weren't intended, or miss content that should be protected.",
-    recommendation: "Review scope changes carefully. Ensure labels cover all content types that contain the sensitivity level they represent.",
-  },
-  "EncryptionEnabled": {
-    setting: "Label Encryption",
-    description: "Controls whether content with this label is encrypted.",
-    risk: "Disabling encryption on a sensitive label means the content is no longer protected even though users believe it is.",
-    recommendation: "Keep encryption enabled on all Confidential and Highly Confidential labels.",
+    setting: "Sensitivity Label Scope",
+    description: "Defines which content types a sensitivity label can be applied to: files, emails, meetings, sites, Teams, Microsoft 365 Groups, and schematized data assets in Microsoft Purview Data Map.",
+    risk: "Expanding scope without review may apply protection to content types that weren't planned for, or removing scope may leave content types unprotected that should be covered.",
+    recommendation: "Review scope changes against your information protection policy. Ensure all content types containing data at this sensitivity level are covered.",
+    docUrl: "https://learn.microsoft.com/en-us/purview/sensitivity-labels",
   },
   "applicationMode": {
     setting: "Label Application Mode",
-    description: "Controls whether a label is applied manually by users, recommended by the system, or applied automatically.",
-    risk: "Changing from manual to automatic may apply labels to content that wasn't intended. Changing from automatic to manual may leave content unprotected.",
-    recommendation: "Test automatic labeling in simulation mode before enabling. Ensure auto-labeling rules are accurate.",
+    description: "Controls how a sensitivity label is applied: manually by users, recommended by the system (users see a suggestion but can dismiss), or automatically applied without user action.",
+    risk: "Switching from manual to automatic may label content users didn't intend to protect, causing access issues. Switching from automatic to manual may leave sensitive content unlabeled.",
+    recommendation: "Test automatic labeling in simulation mode before enabling. Use recommended mode as an intermediate step. Monitor auto-labeling accuracy via activity explorer.",
+    docUrl: "https://learn.microsoft.com/en-us/purview/apply-sensitivity-label-automatically",
+  },
+  "EncryptionEnabled": {
+    setting: "Label Encryption Toggle",
+    description: "Controls whether content with this sensitivity label is encrypted using Azure Rights Management. Encryption persists with the content regardless of where it's stored.",
+    risk: "Disabling encryption on a label that users believe provides protection creates a false sense of security — content is classified but not actually protected.",
+    recommendation: "Keep encryption enabled on all Confidential and Highly Confidential labels. If encryption must be removed, communicate the change to affected users.",
+    docUrl: "https://learn.microsoft.com/en-us/purview/encryption-sensitivity-labels",
   },
   "color": {
-    setting: "Label Display Color",
-    description: "The visual color shown to users when a sensitivity label is applied.",
-    risk: "Color changes can confuse users about the sensitivity level of content they're working with.",
-    recommendation: "Use consistent colors across your label taxonomy. Red for highly confidential, yellow for confidential, blue for general.",
+    setting: "Sensitivity Label Color",
+    description: "The visual color displayed to users in Office apps and other Microsoft 365 services when a sensitivity label is applied. Colors help users quickly identify the sensitivity level.",
+    risk: "Inconsistent colors can confuse users about the sensitivity level of content they're working with, leading to mishandling of sensitive information.",
+    recommendation: "Use a consistent color scheme: green for Public, blue for General, yellow/orange for Confidential, red for Highly Confidential.",
+    docUrl: "https://learn.microsoft.com/en-us/purview/sensitivity-labels-office-apps",
   },
 
   // ─── Intune ───────────────────────────────────────────
+  // Source: https://learn.microsoft.com/en-us/mem/intune/protect/device-compliance-get-started
   "PasswordExpirationDays": {
-    setting: "Password Expiration Policy",
-    description: "The number of days before a device password must be changed.",
-    risk: "Longer expiration periods mean compromised passwords remain valid for longer. Shorter periods cause user friction.",
-    recommendation: "NIST recommends against forced password rotation. Use 90-180 days if required by compliance, or disable with strong MFA.",
+    setting: "Device Password Expiration",
+    description: "The maximum number of days before a device password must be changed. This is configured in Intune device compliance or configuration policies.",
+    risk: "NIST SP 800-63B recommends against periodic password changes as they lead to weaker passwords. However, some compliance frameworks still require rotation.",
+    recommendation: "If your compliance framework requires rotation, set to 90-180 days. Otherwise, disable forced rotation and enforce strong passwords with MFA.",
+    docUrl: "https://learn.microsoft.com/en-us/mem/intune/protect/device-compliance-get-started",
   },
+  // Source: https://learn.microsoft.com/en-us/defender-endpoint/configure-cloud-block-timeout-period-microsoft-defender-antivirus
   "DefenderCloudBlockLevel": {
     setting: "Defender Cloud Protection Level",
-    description: "Controls how aggressively Microsoft Defender blocks suspicious files using cloud intelligence.",
-    risk: "Setting to 'NotConfigured' or 'Low' reduces protection against zero-day threats and new malware variants.",
-    recommendation: "Set to 'High' or 'HighPlus' for maximum protection. Monitor for false positives.",
+    description: "Controls how aggressively Microsoft Defender uses cloud-based intelligence to block suspicious files. Levels: Default, Moderate, High, High+, Zero Tolerance.",
+    risk: "'NotConfigured' or 'Default' provides basic protection. Higher levels catch more zero-day threats but may increase false positives.",
+    recommendation: "Set to 'High' for enterprise environments. Use 'High+' or 'Zero Tolerance' for high-security environments. Monitor for false positives.",
+    docUrl: "https://learn.microsoft.com/en-us/defender-endpoint/specify-cloud-protection-level-microsoft-defender-antivirus",
   },
 
-  // ─── Security Defaults ────────────────────────────────
-  "CurrentScore": {
-    setting: "Microsoft Secure Score",
-    description: "Your organization's security posture score based on Microsoft's security recommendations.",
-    risk: "A low score indicates unaddressed security recommendations that could leave your organization vulnerable.",
-    recommendation: "Review and implement the recommended security controls in the Microsoft 365 Security Center.",
+  // ─── Security Defaults / Secure Score ─────────────────
+  // Source: https://learn.microsoft.com/en-us/entra/fundamentals/security-defaults
+  "IsEnabled": {
+    setting: "Security Feature Toggle",
+    description: "Controls whether a security feature or policy is active in your tenant. For Security Defaults, this enables a baseline set of identity security mechanisms including MFA registration, blocking legacy auth, and protecting privileged actions.",
+    risk: "Disabling security features removes protection layers. For Security Defaults specifically, disabling removes baseline MFA and legacy auth blocking for all users.",
+    recommendation: "Keep security features enabled. If disabling Security Defaults, ensure equivalent or stronger Conditional Access policies are in place.",
+    docUrl: "https://learn.microsoft.com/en-us/entra/fundamentals/security-defaults",
+  },
+  "isEnabled": {
+    setting: "Security Feature Toggle",
+    description: "Controls whether a security feature or policy is active in your tenant.",
+    risk: "Disabling security features removes protection layers from your environment.",
+    recommendation: "Keep security features enabled unless equivalent or stronger controls are in place.",
+    docUrl: "https://learn.microsoft.com/en-us/entra/fundamentals/security-defaults",
   },
 
-  // ─── Generic fallbacks ────────────────────────────────
+  // ─── DSC Infrastructure ───────────────────────────────
+  // Source: https://learn.microsoft.com/en-us/powershell/dsc/concepts/resources/overview
   "_exist": {
-    setting: "Resource Existence",
-    description: "Whether a required service, process, or configuration item exists on the system.",
-    risk: "A missing resource means a required component is not running or installed, which could affect service availability or security.",
-    recommendation: "Ensure the resource is installed and running. Check service status and restart if necessary.",
+    setting: "Resource Existence Check",
+    description: "The DSC canonical property '_exist' indicates whether a managed resource (service, file, registry key) should exist on the system. DSC uses this to determine if a resource needs to be created or deleted.",
+    risk: "A missing required resource means a critical service, configuration, or security control is not present on the system.",
+    recommendation: "Run 'dsc config set' to enforce the desired state and create the missing resource. Investigate why it was removed.",
+    docUrl: "https://learn.microsoft.com/en-us/powershell/dsc/concepts/resources/overview",
   },
   "valueName": {
-    setting: "Registry Value",
-    description: "A Windows registry value that controls system or application behavior.",
-    risk: "Incorrect registry values can disable security features, change application behavior, or create vulnerabilities.",
-    recommendation: "Restore the registry value to the desired state defined in your DSC configuration.",
+    setting: "Windows Registry Value Name",
+    description: "The name of a Windows registry value managed by the Microsoft.Windows/Registry DSC resource. Registry values control system and application behavior.",
+    risk: "A changed or missing registry value can disable security features (like TLS enforcement), alter firewall rules, or modify application configurations.",
+    recommendation: "Use 'dsc resource set' with the Microsoft.Windows/Registry resource to restore the value to its desired state.",
+    docUrl: "https://learn.microsoft.com/en-us/powershell/dsc/reference/schemas/resource/manifest/root",
   },
   "valueData": {
-    setting: "Registry Value Data",
-    description: "The data stored in a Windows registry value.",
-    risk: "Changed registry data can alter security settings, disable protections, or modify application configurations.",
-    recommendation: "Compare the current value with the desired state and remediate using DSC set operation.",
+    setting: "Windows Registry Value Data",
+    description: "The data stored in a Windows registry value. DSC manages registry data types including String, DWord, QWord, Binary, MultiString, and ExpandString.",
+    risk: "Incorrect registry data can weaken security settings (e.g., changing a DWord from 1 to 0 to disable a security feature) or break application functionality.",
+    recommendation: "Compare the current value with the desired state in your DSC configuration document. Run 'dsc config set' to remediate.",
+    docUrl: "https://learn.microsoft.com/en-us/powershell/dsc/reference/schemas/resource/manifest/root",
   },
 };
 
@@ -199,20 +231,15 @@ export function getExplanation(property: string): DriftExplanation | null {
 }
 
 export function getExplanationForDrift(properties: string[]): DriftExplanation[] {
-  const results: DriftExplanation[] = [];
-  for (const prop of properties) {
-    const exp = explanations[prop];
-    if (exp) results.push(exp);
-  }
-  return results;
+  return properties.map((p) => explanations[p]).filter(Boolean);
 }
 
-// Generate a generic explanation for unknown properties
 export function getGenericExplanation(property: string): DriftExplanation {
   return {
     setting: property.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim(),
-    description: `The '${property}' setting has changed from its desired configuration.`,
-    risk: "Configuration drift means your environment no longer matches the approved baseline, which could introduce security gaps or compliance violations.",
-    recommendation: `Review the '${property}' setting and determine if the change was intentional. If not, remediate to match the desired state.`,
+    description: `The '${property}' setting has drifted from its desired configuration. This setting is part of your organization's approved baseline.`,
+    risk: "Configuration drift means your environment no longer matches the approved baseline. This could introduce security gaps, compliance violations, or operational issues.",
+    recommendation: `Review the '${property}' setting and determine if the change was intentional. If not, remediate to match the desired state. Check the Microsoft 365 admin center or relevant admin portal for this setting.`,
+    docUrl: "https://learn.microsoft.com/en-us/microsoft-365/admin/",
   };
 }
