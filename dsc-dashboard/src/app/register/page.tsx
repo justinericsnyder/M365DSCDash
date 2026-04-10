@@ -21,7 +21,11 @@ export default function RegisterPage() {
     setError("");
 
     if (password !== confirm) { setError("Passwords do not match"); return; }
-    if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
+    if (password.length < 10) { setError("Password must be at least 10 characters"); return; }
+    if (!/[a-z]/.test(password)) { setError("Password must contain a lowercase letter"); return; }
+    if (!/[A-Z]/.test(password)) { setError("Password must contain an uppercase letter"); return; }
+    if (!/[0-9]/.test(password)) { setError("Password must contain a number"); return; }
+    if (!/[^a-zA-Z0-9]/.test(password)) { setError("Password must contain a special character"); return; }
 
     setLoading(true);
     try {
@@ -89,7 +93,7 @@ export default function RegisterPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <Input id="name" label="Full Name" placeholder="Jane Smith" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
                 <Input id="email" label="Email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
-                <Input id="password" label="Password" type="password" placeholder="Min 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required />
+                <Input id="password" label="Password" type="password" placeholder="Min 10 chars, upper+lower+number+special" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required />
                 <Input id="confirm" label="Confirm Password" type="password" placeholder="Repeat password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
 
                 {error && (
