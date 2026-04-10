@@ -5,8 +5,9 @@ import { encrypt, decrypt } from "./crypto";
 // Multi-tenant app: users consent in their own tenant
 // No client secrets from users are ever stored
 
-const MICROSOFT_AUTH_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/authorize";
-const MICROSOFT_TOKEN_URL = "https://login.microsoftonline.com/common/oauth2/v2.0/token";
+const TENANT_SLUG = process.env.AZURE_TENANT_ID || "organizations";
+const MICROSOFT_AUTH_URL = `https://login.microsoftonline.com/${TENANT_SLUG}/oauth2/v2.0/authorize`;
+const MICROSOFT_TOKEN_URL = `https://login.microsoftonline.com/${TENANT_SLUG}/oauth2/v2.0/token`;
 const GRAPH_BASE = "https://graph.microsoft.com/v1.0";
 const GRAPH_BETA = "https://graph.microsoft.com/beta";
 
@@ -23,9 +24,10 @@ function getClientSecret(): string {
 }
 
 function getRedirectUri(): string {
-  const base = process.env.NEXTAUTH_URL || process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
-  return `${base}/api/microsoft/callback`;
+  // Use explicit NEXTAUTH_URL first, then fall back
+  if (process.env.NEXTAUTH_URL) return `${process.env.NEXTAUTH_URL}/api/microsoft/callback`;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/api/microsoft/callback`;
+  return "http://localhost:3000/api/microsoft/callback";
 }
 
 // Required Graph API permissions
