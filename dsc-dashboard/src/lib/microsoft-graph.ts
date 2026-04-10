@@ -24,9 +24,10 @@ function getClientSecret(): string {
 }
 
 function getRedirectUri(): string {
-  // Use explicit NEXTAUTH_URL first, then fall back
-  if (process.env.NEXTAUTH_URL) return `${process.env.NEXTAUTH_URL}/api/microsoft/callback`;
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/api/microsoft/callback`;
+  // Use explicit NEXTAUTH_URL first, trimmed to remove any whitespace/newlines
+  const url = (process.env.NEXTAUTH_URL || "").trim();
+  if (url) return `${url}/api/microsoft/callback`;
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL.trim()}/api/microsoft/callback`;
   return "http://localhost:3000/api/microsoft/callback";
 }
 
