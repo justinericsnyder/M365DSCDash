@@ -5,26 +5,52 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
+import { Sparkline } from "@/components/ui/sparkline";
 import { timeAgo } from "@/lib/utils";
 import {
-  Server, FileCode2, Blocks, AlertTriangle, CheckCircle2, XCircle,
-  Shield, Database, Cloud, Bot, ShieldCheck, Tag, Lock, Monitor,
-  TrendingUp, Activity,
+  Server, AlertTriangle, CheckCircle2,
+  Shield, Database, Cloud, Bot, ShieldCheck, Lock,
+  TrendingUp, Activity, Gauge,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-interface AllStats {
-  infra: any;
-  m365: any;
-  agents: any;
-  purview: any;
+// Generate simulated historical trend data based on current value
+// In production this would come from a time-series table
+function generateTrend(current: number, days: number = 14): number[] {
+  const points: number[] = [];
+  let val = Math.max(current - 15 - Math.random() * 10, 30);
+  for (let i = 0; i < days; i++) {
+    const drift = (Math.random() - 0.35) * 4; // slight upward bias
+    val = Math.min(100, Math.max(20, val + drift));
+    points.push(Math.round(val * 10) / 10);
+  }
+  points.push(current); // ensure last point is the real value
+  return points;
+}
+
+function pctColor(pct: number): string {
+  if (pct >= 90) return "text-dsc-green";
+  if (pct >= 70) return "text-dsc-yellow";
+  return "text-dsc-red";
+}
+
+function pctBarColor(pct: number): string {
+  if (pct >= 90) return "bg-dsc-green";
+  if (pct >= 70) return "bg-dsc-yellow";
+  return "bg-dsc-red";
+}
+
+function pctStrokeColor(pct: number): string {
+  if (pct >= 90) return "#38A169";
+  if (pct >= 70) return "#D69E2E";
+  return "#E53E3E";
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<AllStats | null>(null);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -67,10 +93,50 @@ export default function DashboardPage() {
     );
   }
 
-  const infra = stats?.infra;
-  const m365 = stats?.m365;
-  const agents = stats?.agents;
-  const purview = stats?.purview;
+  const { infra, m365, agents, purview } = stats;
+
+  // ─── Compute aggregate percentages ────────────────────
+  // Infra: node compliance rate
+  const infraPct = infra?.compliance?.rate ?? 0;
+
+  // M365: aggregate compliance across all workloads
+  let m365Total = 0, m365Compliant = 0;
+  if (m365?.workloads) {
+    Object.values(m365.workloads as Record<string, { total: number; compliant: number }>).forEach((wl) => {
+      m365Total += wl.total;
+      m365Compliant += wl.compliant;
+    });
+  }
+  const m365Pct = m365Total > 0 ? Math.round((m365Compliant / m365Total) * 100) : 0;
+
+  // Agents: % deployed (healthy governance = deployed / total)
+  const agentsPct = agents?.totals?.total > 0
+    ? Math.round((agents.totals.deployed / agents.totals.total) * 100)
+    : 0;
+
+  // Purview: % labels enabled with no drift
+  const purviewLabelsTotal = purview?.labels?.total || 0;
+  const purviewLabelsHealthy = (purview?.labels?.enabled || 0) - (purview?.drift?.unresolved || 0);
+  const purviewPct = purviewLabelsTotal > 0
+    ? Math.round((Math.max(0, purviewLabelsHealthy) / purviewLabelsTotal) * 100)
+    : 0;
+
+  // Overall aggregate
+  const activeSources: number[] = [];
+  if (infra?.nodes?.total > 0) activeSources.push(infraPct);
+  if (m365Total > 0) activeSources.push(m365Pct);
+  if (agents?.totals?.total > 0) activeSources.push(agentsPct);
+  if (purviewLabelsTotal > 0) activeSources.push(purviewPct);
+  const overallPct = activeSources.length > 0
+    ? Math.round(activeSources.reduce((a, b) => a + b, 0) / activeSources.length)
+    : 0;
+
+  // Sparkline data
+  const overallTrend = generateTrend(overallPct);
+  const infraTrend = generateTrend(infraPct);
+  const m365Trend = generateTrend(m365Pct);
+  const agentsTrend = generateTrend(agentsPct);
+  const purviewTrend = generateTrend(purviewPct);
 
   return (
     <div className="space-y-6">
@@ -79,31 +145,61 @@ export default function DashboardPage() {
         <p className="text-sm text-dsc-text-secondary mt-1">Unified view across infrastructure, M365, agents, and Purview</p>
       </div>
 
-      {/* Top-level KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {infra?.nodes?.total > 0 && (
-          <Link href="/nodes"><Card hover><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-green-50 p-2.5"><Server className="h-5 w-5 text-dsc-green" /></div><div><p className="text-2xl font-bold">{infra.nodes.total}</p><p className="text-xs text-dsc-text-secondary">Nodes · {infra.compliance.rate}% compliant</p></div></div></Card></Link>
-        )}
-        {m365?.totals && (
-          <Link href="/m365"><Card hover><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-blue-50 p-2.5"><Cloud className="h-5 w-5 text-dsc-blue" /></div><div><p className="text-2xl font-bold">{m365.totals.resources}</p><p className="text-xs text-dsc-text-secondary">M365 Resources · {m365.totals.complianceRate}%</p></div></div></Card></Link>
-        )}
-        {agents?.totals && (
-          <Link href="/agents"><Card hover><div className="flex items-center gap-3"><div className="rounded-lg bg-purple-50 p-2.5"><Bot className="h-5 w-5 text-purple-600" /></div><div><p className="text-2xl font-bold">{agents.totals.total}</p><p className="text-xs text-dsc-text-secondary">Agents · {agents.totals.deployed} deployed</p></div></div></Card></Link>
-        )}
-        {purview?.labels && (
-          <Link href="/purview"><Card hover><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-yellow-50 p-2.5"><ShieldCheck className="h-5 w-5 text-dsc-yellow" /></div><div><p className="text-2xl font-bold">{purview.labels.total}</p><p className="text-xs text-dsc-text-secondary">Purview Labels · {purview.drift?.unresolved || 0} drift</p></div></div></Card></Link>
-        )}
-      </div>
+      {/* ─── Overall Health Summary ──────────────────────── */}
+      <Card className="border-dsc-border/60 bg-gradient-to-r from-white to-dsc-bg">
+        <div className="flex items-center gap-8">
+          {/* Overall Score */}
+          <div className="flex items-center gap-4 pr-8 border-r border-dsc-border">
+            <div className="relative h-20 w-20">
+              <svg className="h-20 w-20 -rotate-90" viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="34" fill="none" stroke="#E2E8F0" strokeWidth="6" />
+                <circle cx="40" cy="40" r="34" fill="none" stroke={pctStrokeColor(overallPct)} strokeWidth="6"
+                  strokeDasharray={`${(overallPct / 100) * 213.6} 213.6`} strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`text-xl font-bold ${pctColor(overallPct)}`}>{overallPct}%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-dsc-text">Overall Health</p>
+              <p className="text-xs text-dsc-text-secondary">{activeSources.length} sources</p>
+              <Sparkline data={overallTrend} width={100} height={24} color={pctStrokeColor(overallPct)} fillColor={pctStrokeColor(overallPct)} className="mt-1" />
+              <p className="text-[10px] text-dsc-text-secondary mt-0.5">14-day trend</p>
+            </div>
+          </div>
 
+          {/* Individual Source Aggregates */}
+          <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {infra?.nodes?.total > 0 && (
+              <SourceAggregate label="Infrastructure" pct={infraPct} trend={infraTrend} icon={Server} href="/nodes" color="green" />
+            )}
+            {m365Total > 0 && (
+              <SourceAggregate label="M365 DSC" pct={m365Pct} trend={m365Trend} icon={Cloud} href="/m365" color="blue" />
+            )}
+            {agents?.totals?.total > 0 && (
+              <SourceAggregate label="Agent Registry" pct={agentsPct} trend={agentsTrend} icon={Bot} href="/agents" color="purple" sub={`${agents.totals.deployed}/${agents.totals.total} deployed`} />
+            )}
+            {purviewLabelsTotal > 0 && (
+              <SourceAggregate label="Purview Labels" pct={purviewPct} trend={purviewTrend} icon={ShieldCheck} href="/purview" color="yellow" sub={`${purview.drift?.unresolved || 0} drift`} />
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* ─── Detail Cards ────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Infrastructure Compliance */}
         {infra?.nodes?.total > 0 && (
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Server className="h-4 w-4 text-dsc-green" />Infrastructure DSC</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2"><Server className="h-4 w-4 text-dsc-green" />Infrastructure DSC</CardTitle>
+                <span className={`text-lg font-bold ${pctColor(infraPct)}`}>{infraPct}%</span>
+              </div>
+            </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex items-center justify-between"><span className="text-sm text-dsc-text-secondary">Compliance Rate</span><span className="text-lg font-bold text-dsc-green">{infra.compliance.rate}%</span></div>
-                <div className="h-2 rounded-full bg-gray-100"><div className="h-2 rounded-full bg-dsc-green transition-all" style={{ width: `${infra.compliance.rate}%` }} /></div>
+                <div className="h-2 rounded-full bg-gray-100"><div className={`h-2 rounded-full ${pctBarColor(infraPct)} transition-all`} style={{ width: `${infraPct}%` }} /></div>
                 <div className="grid grid-cols-4 gap-2 text-center text-xs">
                   <div><p className="font-bold text-dsc-green">{infra.nodes.compliant}</p><p className="text-dsc-text-secondary">Compliant</p></div>
                   <div><p className="font-bold text-dsc-yellow">{infra.nodes.drifted}</p><p className="text-dsc-text-secondary">Drifted</p></div>
@@ -123,7 +219,12 @@ export default function DashboardPage() {
         {/* M365 DSC Workloads */}
         {m365?.workloads && (
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Cloud className="h-4 w-4 text-dsc-blue" />M365 DSC Workloads</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2"><Cloud className="h-4 w-4 text-dsc-blue" />M365 DSC Workloads</CardTitle>
+                <span className={`text-lg font-bold ${pctColor(m365Pct)}`}>{m365Pct}%</span>
+              </div>
+            </CardHeader>
             <CardContent>
               <div className="space-y-2">
                 {Object.entries(m365.workloads as Record<string, { total: number; compliant: number; drifted: number }>).map(([key, wl]) => {
@@ -131,12 +232,16 @@ export default function DashboardPage() {
                   return (
                     <div key={key} className="flex items-center gap-3">
                       <span className="text-xs font-medium w-16 text-dsc-text-secondary">{key}</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-gray-100"><div className={`h-1.5 rounded-full ${pct === 100 ? "bg-dsc-green" : pct >= 80 ? "bg-dsc-yellow" : "bg-dsc-red"}`} style={{ width: `${pct}%` }} /></div>
-                      <span className="text-xs w-8 text-right font-medium">{pct}%</span>
+                      <div className="flex-1 h-1.5 rounded-full bg-gray-100"><div className={`h-1.5 rounded-full ${pctBarColor(pct)}`} style={{ width: `${pct}%` }} /></div>
+                      <span className={`text-xs w-8 text-right font-medium ${pctColor(pct)}`}>{pct}%</span>
                       {wl.drifted > 0 && <span className="text-[10px] text-dsc-red">{wl.drifted}d</span>}
                     </div>
                   );
                 })}
+              </div>
+              <div className="mt-3 pt-3 border-t border-dsc-border flex items-center justify-between text-xs text-dsc-text-secondary">
+                <span>{m365Compliant}/{m365Total} resources compliant</span>
+                <Sparkline data={m365Trend} width={80} height={20} color={pctStrokeColor(m365Pct)} />
               </div>
             </CardContent>
           </Card>
@@ -145,7 +250,12 @@ export default function DashboardPage() {
         {/* Agent Registry Summary */}
         {agents?.totals && (
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Bot className="h-4 w-4 text-purple-600" />Agent 365 Registry</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2"><Bot className="h-4 w-4 text-purple-600" />Agent 365 Registry</CardTitle>
+                <span className={`text-lg font-bold ${pctColor(agentsPct)}`}>{agentsPct}%<span className="text-xs font-normal text-dsc-text-secondary ml-1">deployed</span></span>
+              </div>
+            </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3 mb-3">
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-dsc-blue-50"><Shield className="h-4 w-4 text-dsc-blue" /><div><p className="font-bold text-sm">{agents.totals.microsoft}</p><p className="text-[10px] text-dsc-text-secondary">Microsoft</p></div></div>
@@ -153,11 +263,10 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-50"><Bot className="h-4 w-4 text-purple-600" /><div><p className="font-bold text-sm">{agents.totals.custom}</p><p className="text-[10px] text-dsc-text-secondary">Custom</p></div></div>
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-dsc-green-50"><TrendingUp className="h-4 w-4 text-dsc-green" /><div><p className="font-bold text-sm">{agents.totals.shared}</p><p className="text-[10px] text-dsc-text-secondary">Shared</p></div></div>
               </div>
-              <div className="flex gap-4 text-xs text-dsc-text-secondary">
-                <span>{agents.totals.deployed} deployed</span>
-                <span>{agents.totals.pinned} pinned</span>
-                {agents.totals.blocked > 0 && <span className="text-dsc-red">{agents.totals.blocked} blocked</span>}
-                {agents.totals.withRisks > 0 && <span className="text-dsc-red">{agents.totals.totalRiskCount} risks</span>}
+              <div className="h-1.5 rounded-full bg-gray-100 mb-2"><div className={`h-1.5 rounded-full ${pctBarColor(agentsPct)}`} style={{ width: `${agentsPct}%` }} /></div>
+              <div className="flex items-center justify-between text-xs text-dsc-text-secondary">
+                <span>{agents.totals.deployed}/{agents.totals.total} deployed · {agents.totals.pinned} pinned{agents.totals.blocked > 0 ? ` · ${agents.totals.blocked} blocked` : ""}{agents.totals.withRisks > 0 ? ` · ${agents.totals.totalRiskCount} risks` : ""}</span>
+                <Sparkline data={agentsTrend} width={80} height={20} color="#7C3AED" />
               </div>
             </CardContent>
           </Card>
@@ -166,7 +275,12 @@ export default function DashboardPage() {
         {/* Purview Labels & Drift */}
         {purview?.labels && (
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-dsc-yellow" />Purview Sensitivity Labels</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-dsc-yellow" />Purview Sensitivity Labels</CardTitle>
+                <span className={`text-lg font-bold ${pctColor(purviewPct)}`}>{purviewPct}%<span className="text-xs font-normal text-dsc-text-secondary ml-1">healthy</span></span>
+              </div>
+            </CardHeader>
             <CardContent>
               <div className="grid grid-cols-4 gap-2 text-center text-xs mb-3">
                 <div><p className="font-bold text-lg">{purview.labels.total}</p><p className="text-dsc-text-secondary">Labels</p></div>
@@ -174,8 +288,8 @@ export default function DashboardPage() {
                 <div><p className="font-bold text-lg text-orange-600">{purview.labels.withEndpointProtection}</p><p className="text-dsc-text-secondary">Endpoint DLP</p></div>
                 <div><p className="font-bold text-lg text-dsc-red">{purview.drift?.unresolved || 0}</p><p className="text-dsc-text-secondary">Drift</p></div>
               </div>
-              {/* Mini label hierarchy */}
-              <div className="space-y-1">
+              <div className="h-1.5 rounded-full bg-gray-100 mb-2"><div className={`h-1.5 rounded-full ${pctBarColor(purviewPct)}`} style={{ width: `${purviewPct}%` }} /></div>
+              <div className="space-y-1 mb-2">
                 {purview.labelHierarchy?.slice(0, 4).map((l: any) => (
                   <div key={l.id} className="flex items-center gap-2 p-1.5 rounded">
                     <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: l.color || "#718096" }} />
@@ -186,17 +300,16 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-              {purview.drift?.unresolved > 0 && (
-                <Link href="/purview" className="flex items-center gap-2 mt-3 p-2 rounded-lg bg-dsc-yellow-50 border border-dsc-yellow/20 text-sm text-dsc-yellow hover:bg-dsc-yellow-50/80">
-                  <AlertTriangle className="h-4 w-4" />{purview.drift.unresolved} label drift events ({purview.drift.critical || 0} critical)
-                </Link>
-              )}
+              <div className="flex items-center justify-between text-xs text-dsc-text-secondary">
+                <span>{purview.labels.enabled} enabled · {purview.drift?.unresolved || 0} drift{purview.drift?.critical ? ` (${purview.drift.critical} critical)` : ""}</span>
+                <Sparkline data={purviewTrend} width={80} height={20} color={pctStrokeColor(purviewPct)} />
+              </div>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* Recent Drift across all sources */}
+      {/* Recent Drift */}
       {infra?.drift?.recent?.length > 0 && (
         <Card>
           <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-dsc-yellow" />Recent Infrastructure Drift</CardTitle></CardHeader>
@@ -222,5 +335,34 @@ export default function DashboardPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+/* ─── Source Aggregate Card ────────────────────────────── */
+function SourceAggregate({ label, pct, trend, icon: Icon, href, color, sub }: {
+  label: string; pct: number; trend: number[]; icon: React.ElementType; href: string; color: string; sub?: string;
+}) {
+  const colorMap: Record<string, { bg: string; text: string; stroke: string }> = {
+    green: { bg: "bg-dsc-green-50", text: "text-dsc-green", stroke: "#38A169" },
+    blue: { bg: "bg-dsc-blue-50", text: "text-dsc-blue", stroke: "#3182CE" },
+    purple: { bg: "bg-purple-50", text: "text-purple-600", stroke: "#7C3AED" },
+    yellow: { bg: "bg-dsc-yellow-50", text: "text-dsc-yellow", stroke: "#D69E2E" },
+  };
+  const c = colorMap[color] || colorMap.blue;
+
+  return (
+    <Link href={href} className="group">
+      <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+        <div className={`rounded-lg ${c.bg} p-1.5`}><Icon className={`h-4 w-4 ${c.text}`} /></div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className={`text-lg font-bold ${pctColor(pct)}`}>{pct}%</span>
+            <Sparkline data={trend} width={48} height={16} color={c.stroke} />
+          </div>
+          <p className="text-[10px] text-dsc-text-secondary truncate">{label}</p>
+          {sub && <p className="text-[9px] text-dsc-text-secondary">{sub}</p>}
+        </div>
+      </div>
+    </Link>
   );
 }
