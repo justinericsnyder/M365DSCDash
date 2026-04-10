@@ -51,6 +51,7 @@ function SettingsContent() {
   const [seeding, setSeeding] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     const [authRes, msRes] = await Promise.all([
@@ -106,6 +107,30 @@ function SettingsContent() {
       } else toast.error(data.error);
     } catch { toast.error("Failed to disconnect"); }
     finally { setDisconnecting(false); }
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/microsoft/sync", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        // Show per-source results
+        const r = data.results as Record<string, { success: boolean; count?: number; error?: string }>;
+        for (const [key, val] of Object.entries(r)) {
+          if (val.success) {
+            toast.success(`${key}: ${val.count ?? 0} items synced`, { duration: 3000 });
+          } else {
+            toast(`${key}: ${val.error}`, { icon: "⚠️", duration: 5000 });
+          }
+        }
+        fetchStatus();
+      } else {
+        toast.error(data.error || "Sync failed");
+      }
+    } catch { toast.error("Sync failed"); }
+    finally { setSyncing(false); }
   };
 
   const handleSeed = async () => {
@@ -197,6 +222,9 @@ function SettingsContent() {
               )}
 
               <div className="flex gap-2">
+                <Button onClick={handleSync} disabled={syncing}>
+                  <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />{syncing ? "Syncing..." : "Sync Now"}
+                </Button>
                 <Button variant="outline" size="sm" onClick={handleConnect} disabled={connecting}>
                   <RefreshCw className={`h-3.5 w-3.5 ${connecting ? "animate-spin" : ""}`} />Reconnect
                 </Button>
