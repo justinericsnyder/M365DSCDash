@@ -194,7 +194,10 @@ export default function DashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2"><Server className="h-4 w-4 text-dsc-green" />Infrastructure DSC</CardTitle>
-                <span className={`text-lg font-bold ${pctColor(infraPct)}`}>{infraPct}%</span>
+                <div className="flex items-center gap-2">
+                  <Sparkline data={infraTrend} width={64} height={22} color={pctStrokeColor(infraPct)} fillColor={pctStrokeColor(infraPct)} />
+                  <span className={`text-lg font-bold ${pctColor(infraPct)}`}>{infraPct}%</span>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -222,7 +225,10 @@ export default function DashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2"><Cloud className="h-4 w-4 text-dsc-blue" />M365 DSC Workloads</CardTitle>
-                <span className={`text-lg font-bold ${pctColor(m365Pct)}`}>{m365Pct}%</span>
+                <div className="flex items-center gap-2">
+                  <Sparkline data={m365Trend} width={64} height={22} color={pctStrokeColor(m365Pct)} fillColor={pctStrokeColor(m365Pct)} />
+                  <span className={`text-lg font-bold ${pctColor(m365Pct)}`}>{m365Pct}%</span>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -241,7 +247,6 @@ export default function DashboardPage() {
               </div>
               <div className="mt-3 pt-3 border-t border-dsc-border flex items-center justify-between text-xs text-dsc-text-secondary">
                 <span>{m365Compliant}/{m365Total} resources compliant</span>
-                <Sparkline data={m365Trend} width={80} height={20} color={pctStrokeColor(m365Pct)} />
               </div>
             </CardContent>
           </Card>
@@ -253,7 +258,11 @@ export default function DashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2"><Bot className="h-4 w-4 text-purple-600" />Agent 365 Registry</CardTitle>
-                <span className={`text-lg font-bold ${pctColor(agentsPct)}`}>{agentsPct}%<span className="text-xs font-normal text-dsc-text-secondary ml-1">deployed</span></span>
+                <div className="flex items-center gap-2">
+                  <Sparkline data={agentsTrend} width={64} height={22} color="#7C3AED" fillColor="#7C3AED" />
+                  <span className={`text-lg font-bold ${pctColor(agentsPct)}`}>{agentsPct}%</span>
+                  <span className="text-xs font-normal text-dsc-text-secondary">deployed</span>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -266,7 +275,6 @@ export default function DashboardPage() {
               <div className="h-1.5 rounded-full bg-gray-100 mb-2"><div className={`h-1.5 rounded-full ${pctBarColor(agentsPct)}`} style={{ width: `${agentsPct}%` }} /></div>
               <div className="flex items-center justify-between text-xs text-dsc-text-secondary">
                 <span>{agents.totals.deployed}/{agents.totals.total} deployed · {agents.totals.pinned} pinned{agents.totals.blocked > 0 ? ` · ${agents.totals.blocked} blocked` : ""}{agents.totals.withRisks > 0 ? ` · ${agents.totals.totalRiskCount} risks` : ""}</span>
-                <Sparkline data={agentsTrend} width={80} height={20} color="#7C3AED" />
               </div>
             </CardContent>
           </Card>
@@ -278,7 +286,11 @@ export default function DashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-dsc-yellow" />Purview Sensitivity Labels</CardTitle>
-                <span className={`text-lg font-bold ${pctColor(purviewPct)}`}>{purviewPct}%<span className="text-xs font-normal text-dsc-text-secondary ml-1">healthy</span></span>
+                <div className="flex items-center gap-2">
+                  <Sparkline data={purviewTrend} width={64} height={22} color={pctStrokeColor(purviewPct)} fillColor={pctStrokeColor(purviewPct)} />
+                  <span className={`text-lg font-bold ${pctColor(purviewPct)}`}>{purviewPct}%</span>
+                  <span className="text-xs font-normal text-dsc-text-secondary">healthy</span>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -302,7 +314,6 @@ export default function DashboardPage() {
               </div>
               <div className="flex items-center justify-between text-xs text-dsc-text-secondary">
                 <span>{purview.labels.enabled} enabled · {purview.drift?.unresolved || 0} drift{purview.drift?.critical ? ` (${purview.drift.critical} critical)` : ""}</span>
-                <Sparkline data={purviewTrend} width={80} height={20} color={pctStrokeColor(purviewPct)} />
               </div>
             </CardContent>
           </Card>
