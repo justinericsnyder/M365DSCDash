@@ -116,11 +116,14 @@ function SettingsContent() {
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
-        // Show per-source results
-        const r = data.results as Record<string, { success: boolean; count?: number; error?: string }>;
+        const r = data.results as Record<string, { success: boolean; count?: number; error?: string; skipped?: boolean; reason?: string }>;
         for (const [key, val] of Object.entries(r)) {
-          if (val.success) {
-            toast.success(`${key}: ${val.count ?? 0} items synced`, { duration: 3000 });
+          if (val.success && val.count !== undefined) {
+            toast.success(`✓ ${key}: ${val.count} items synced`, { duration: 3000 });
+          } else if (val.success) {
+            toast.success(`✓ ${key}: synced`, { duration: 3000 });
+          } else if (val.skipped) {
+            toast(`${key}: ${val.reason || "Not available on your license"}`, { icon: "ℹ️", duration: 6000 });
           } else {
             toast(`${key}: ${val.error}`, { icon: "⚠️", duration: 5000 });
           }
