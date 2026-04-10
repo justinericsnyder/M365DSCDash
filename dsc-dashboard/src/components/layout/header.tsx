@@ -78,9 +78,9 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-dsc-border bg-white/80 backdrop-blur-sm px-6">
-      {/* Search */}
-      <div className="relative w-96" ref={searchRef}>
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-dsc-border bg-white/80 backdrop-blur-sm px-4 lg:px-6">
+      {/* Search — hidden on small screens, compact on medium */}
+      <div className="relative w-full max-w-xs sm:max-w-sm lg:max-w-md ml-10 lg:ml-0" ref={searchRef}>
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dsc-text-secondary" />
         <input
           type="text"

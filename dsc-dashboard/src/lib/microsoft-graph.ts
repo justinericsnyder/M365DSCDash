@@ -33,12 +33,18 @@ function getRedirectUri(): string {
 
 // Required Graph API permissions
 const SCOPES = [
-  "offline_access",                    // Refresh token
-  "User.Read",                         // Basic profile
-  "Organization.Read.All",             // Tenant info
-  "Directory.Read.All",                // Group settings, domains
-  "Policy.Read.All",                   // Conditional access, auth methods, security defaults
-  "SensitivityLabel.Read",             // Purview labels
+  "offline_access",                              // Refresh token
+  "User.Read",                                   // Basic profile
+  "Organization.Read.All",                       // Tenant info
+  "Directory.Read.All",                          // Group settings, domains, roles
+  "Policy.Read.All",                             // CA policies, auth methods, security defaults
+  "SensitivityLabel.Read",                       // Purview labels
+  "SecurityEvents.Read.All",                     // Security alerts, secure score
+  "DeviceManagementConfiguration.Read.All",      // Intune compliance & config
+  "DeviceManagementApps.Read.All",               // Intune app protection
+  "MailboxSettings.Read",                        // Exchange mailbox settings
+  "SharePointTenantSettings.Read.All",           // SharePoint admin
+  "RoleManagement.Read.Directory",               // Role definitions & assignments
 ].join(" ");
 
 // ─── OAuth2 Authorization Code + PKCE ───────────────────

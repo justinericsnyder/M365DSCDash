@@ -111,18 +111,9 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   if (caPolicies.data) {
     for (const p of ((caPolicies.data as any).value || [])) {
       resources.push({
-        workload: "AAD",
-        resourceType: "AADConditionalAccessPolicy",
+        workload: "AAD", resourceType: "AADConditionalAccessPolicy",
         displayName: p.displayName || "Unnamed Policy",
-        properties: {
-          DisplayName: p.displayName,
-          State: p.state,
-          Conditions: p.conditions,
-          GrantControls: p.grantControls,
-          SessionControls: p.sessionControls,
-          CreatedDateTime: p.createdDateTime,
-          ModifiedDateTime: p.modifiedDateTime,
-        },
+        properties: { DisplayName: p.displayName, State: p.state, Conditions: p.conditions, GrantControls: p.grantControls, SessionControls: p.sessionControls, CreatedDateTime: p.createdDateTime, ModifiedDateTime: p.modifiedDateTime },
         status: p.state === "enabled" ? "COMPLIANT" : "DRIFTED",
       });
     }
@@ -131,12 +122,9 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   // ─── AAD: Authentication Methods Policy ───────────────
   const authMethods = await tryGraphGet(token, "/policies/authenticationMethodsPolicy");
   if (authMethods.data) {
-    const policy = authMethods.data as any;
-    const methods = policy.authenticationMethodConfigurations || [];
-    for (const m of methods) {
+    for (const m of ((authMethods.data as any).authenticationMethodConfigurations || [])) {
       resources.push({
-        workload: "AAD",
-        resourceType: "AADAuthenticationMethodPolicy",
+        workload: "AAD", resourceType: "AADAuthenticationMethodPolicy",
         displayName: m["@odata.type"]?.replace("#microsoft.graph.", "") || m.id || "Auth Method",
         properties: { Id: m.id, State: m.state, ...m },
         status: m.state === "enabled" ? "COMPLIANT" : "DRIFTED",
@@ -151,8 +139,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
       const values: Record<string, string> = {};
       for (const v of (gs.values || [])) values[v.name] = v.value;
       resources.push({
-        workload: "AAD",
-        resourceType: "AADGroupsSettings",
+        workload: "AAD", resourceType: "AADGroupsSettings",
         displayName: gs.displayName || "Group Settings",
         properties: { TemplateId: gs.templateId, ...values },
         status: "COMPLIANT",
@@ -165,17 +152,9 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   if (authzPolicy.data) {
     const p = authzPolicy.data as any;
     resources.push({
-      workload: "AAD",
-      resourceType: "AADAuthorizationPolicy",
+      workload: "AAD", resourceType: "AADAuthorizationPolicy",
       displayName: "Authorization Policy",
-      properties: {
-        AllowInvitesFrom: p.allowInvitesFrom,
-        AllowedToSignUpEmailBasedSubscriptions: p.allowedToSignUpEmailBasedSubscriptions,
-        AllowEmailVerifiedUsersToJoinOrganization: p.allowEmailVerifiedUsersToJoinOrganization,
-        BlockMsolPowerShell: p.blockMsolPowerShell,
-        GuestUserRoleId: p.guestUserRoleId,
-        AllowedToUseSspr: p.allowedToUseSspr,
-      },
+      properties: { AllowInvitesFrom: p.allowInvitesFrom, AllowedToSignUpEmailBasedSubscriptions: p.allowedToSignUpEmailBasedSubscriptions, AllowEmailVerifiedUsersToJoinOrganization: p.allowEmailVerifiedUsersToJoinOrganization, BlockMsolPowerShell: p.blockMsolPowerShell, GuestUserRoleId: p.guestUserRoleId },
       status: p.blockMsolPowerShell ? "COMPLIANT" : "DRIFTED",
     });
   }
@@ -185,11 +164,61 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   if (secDefaults.data) {
     const sd = secDefaults.data as any;
     resources.push({
-      workload: "AAD",
-      resourceType: "AADSecurityDefaults",
+      workload: "AAD", resourceType: "AADSecurityDefaults",
       displayName: "Security Defaults",
       properties: { IsEnabled: sd.isEnabled, DisplayName: sd.displayName },
       status: sd.isEnabled ? "COMPLIANT" : "DRIFTED",
+    });
+  }
+
+  // ─── AAD: Named Locations ─────────────────────────────
+  const namedLocations = await tryGraphGet(token, "/identity/conditionalAccess/namedLocations");
+  if (namedLocations.data) {
+    for (const loc of ((namedLocations.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "AADNamedLocation",
+        displayName: loc.displayName || "Named Location",
+        properties: { DisplayName: loc.displayName, Type: loc["@odata.type"], IsTrusted: loc.isTrusted, CreatedDateTime: loc.createdDateTime, ...loc },
+        status: "COMPLIANT",
+      });
+    }
+  }
+
+  // ─── AAD: Directory Roles ─────────────────────────────
+  const dirRoles = await tryGraphGet(token, "/directoryRoles");
+  if (dirRoles.data) {
+    for (const role of ((dirRoles.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "AADRoleDefinition",
+        displayName: role.displayName || "Directory Role",
+        properties: { DisplayName: role.displayName, Description: role.description, RoleTemplateId: role.roleTemplateId },
+        status: "COMPLIANT",
+      });
+    }
+  }
+
+  // ─── AAD: Domains ─────────────────────────────────────
+  const domains = await tryGraphGet(token, "/domains");
+  if (domains.data) {
+    for (const d of ((domains.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "AADDomain",
+        displayName: d.id,
+        properties: { Id: d.id, IsDefault: d.isDefault, IsVerified: d.isVerified, IsAdminManaged: d.isAdminManaged, AuthenticationType: d.authenticationType, SupportedServices: d.supportedServices },
+        status: d.isVerified ? "COMPLIANT" : "DRIFTED",
+      });
+    }
+  }
+
+  // ─── AAD: Cross-Tenant Access Settings ────────────────
+  const crossTenant = await tryGraphGet(token, "/policies/crossTenantAccessPolicy");
+  if (crossTenant.data) {
+    const ct = crossTenant.data as any;
+    resources.push({
+      workload: "AAD", resourceType: "AADCrossTenantAccessPolicy",
+      displayName: "Cross-Tenant Access Policy",
+      properties: { AllowedCloudEndpoints: ct.allowedCloudEndpoints, IsServiceDefault: ct.isServiceDefault },
+      status: "COMPLIANT",
     });
   }
 
@@ -198,17 +227,9 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   if (spoSettings.data) {
     const s = spoSettings.data as any;
     resources.push({
-      workload: "SPO",
-      resourceType: "SPOTenantSettings",
+      workload: "SPO", resourceType: "SPOTenantSettings",
       displayName: "SharePoint Tenant Settings",
-      properties: {
-        SharingCapability: s.sharingCapability,
-        IsResharingByExternalUsersEnabled: s.isResharingByExternalUsersEnabled,
-        IsCommentingOnSitePagesEnabled: s.isCommentingOnSitePagesEnabled,
-        IsSiteCreationEnabled: s.isSiteCreationEnabled,
-        IsSitePagesCreationEnabled: s.isSitePagesCreationEnabled,
-        SharingDomainRestrictionMode: s.sharingDomainRestrictionMode,
-      },
+      properties: { SharingCapability: s.sharingCapability, IsResharingByExternalUsersEnabled: s.isResharingByExternalUsersEnabled, IsCommentingOnSitePagesEnabled: s.isCommentingOnSitePagesEnabled, IsSiteCreationEnabled: s.isSiteCreationEnabled, IsSitePagesCreationEnabled: s.isSitePagesCreationEnabled, SharingDomainRestrictionMode: s.sharingDomainRestrictionMode },
       status: s.sharingCapability === "disabled" || s.sharingCapability === "externalUserSharingOnly" ? "COMPLIANT" : "DRIFTED",
     });
   }
@@ -218,81 +239,121 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   if (teamsApps.data) {
     const t = teamsApps.data as any;
     resources.push({
-      workload: "TEAMS",
-      resourceType: "TeamsAppSettings",
+      workload: "TEAMS", resourceType: "TeamsAppSettings",
       displayName: "Teams App Settings",
-      properties: {
-        IsChatResourceSpecificConsentEnabled: t.isChatResourceSpecificConsentEnabled,
-      },
+      properties: { IsChatResourceSpecificConsentEnabled: t.isChatResourceSpecificConsentEnabled },
       status: "COMPLIANT",
     });
   }
 
-  // ─── Domains ──────────────────────────────────────────
-  const domains = await tryGraphGet(token, "/domains");
-  if (domains.data) {
-    for (const d of ((domains.data as any).value || [])) {
+  // ─── Intune: Device Compliance Policies ───────────────
+  const compliancePolicies = await tryGraphGet(token, "/deviceManagement/deviceCompliancePolicies", true);
+  if (compliancePolicies.data) {
+    for (const p of ((compliancePolicies.data as any).value || [])) {
       resources.push({
-        workload: "AAD",
-        resourceType: "AADDomain",
-        displayName: d.id,
-        properties: {
-          Id: d.id,
-          IsDefault: d.isDefault,
-          IsVerified: d.isVerified,
-          IsAdminManaged: d.isAdminManaged,
-          AuthenticationType: d.authenticationType,
-          SupportedServices: d.supportedServices,
-        },
-        status: d.isVerified ? "COMPLIANT" : "DRIFTED",
+        workload: "INTUNE", resourceType: "IntuneDeviceCompliancePolicy",
+        displayName: p.displayName || "Compliance Policy",
+        properties: { DisplayName: p.displayName, Description: p.description, CreatedDateTime: p.createdDateTime, LastModifiedDateTime: p.lastModifiedDateTime, Version: p.version, ...p },
+        status: "COMPLIANT",
       });
     }
   }
 
+  // ─── Intune: Device Configuration Policies ────────────
+  const configPolicies = await tryGraphGet(token, "/deviceManagement/deviceConfigurations", true);
+  if (configPolicies.data) {
+    for (const p of ((configPolicies.data as any).value || [])) {
+      resources.push({
+        workload: "INTUNE", resourceType: "IntuneDeviceConfigurationPolicy",
+        displayName: p.displayName || "Config Policy",
+        properties: { DisplayName: p.displayName, Description: p.description, CreatedDateTime: p.createdDateTime, LastModifiedDateTime: p.lastModifiedDateTime, Version: p.version, Type: p["@odata.type"] },
+        status: "COMPLIANT",
+      });
+    }
+  }
+
+  // ─── Intune: App Protection Policies ──────────────────
+  const appProtection = await tryGraphGet(token, "/deviceAppManagement/managedAppPolicies", true);
+  if (appProtection.data) {
+    for (const p of ((appProtection.data as any).value || [])) {
+      resources.push({
+        workload: "INTUNE", resourceType: "IntuneAppProtectionPolicy",
+        displayName: p.displayName || "App Protection Policy",
+        properties: { DisplayName: p.displayName, Description: p.description, CreatedDateTime: p.createdDateTime, LastModifiedDateTime: p.lastModifiedDateTime, Version: p.version, Type: p["@odata.type"] },
+        status: "COMPLIANT",
+      });
+    }
+  }
+
+  // ─── Security: Secure Score ───────────────────────────
+  const secureScore = await tryGraphGet(token, "/security/secureScores?$top=1");
+  if (secureScore.data) {
+    const scores = (secureScore.data as any).value || [];
+    if (scores.length > 0) {
+      const s = scores[0];
+      resources.push({
+        workload: "DEFENDER", resourceType: "SecureScore",
+        displayName: "Microsoft Secure Score",
+        properties: { CurrentScore: s.currentScore, MaxScore: s.maxScore, AverageComparativeScore: s.averageComparativeScores, CreatedDateTime: s.createdDateTime, EnabledServices: s.enabledServices },
+        status: s.currentScore >= s.maxScore * 0.7 ? "COMPLIANT" : "DRIFTED",
+      });
+    }
+  }
+
+  // ─── Security: Secure Score Control Profiles ──────────
+  const scoreProfiles = await tryGraphGet(token, "/security/secureScoreControlProfiles?$top=50");
+  if (scoreProfiles.data) {
+    for (const p of ((scoreProfiles.data as any).value || []).slice(0, 30)) {
+      resources.push({
+        workload: "DEFENDER", resourceType: "SecureScoreControlProfile",
+        displayName: p.title || p.id || "Control",
+        properties: { Title: p.title, MaxScore: p.maxScore, CurrentScore: p.currentScore, ControlCategory: p.controlCategory, Service: p.service, Tier: p.tier, UserImpact: p.userImpact, ImplementationCost: p.implementationCost, Threats: p.threats },
+        status: (p.currentScore ?? 0) >= (p.maxScore ?? 1) ? "COMPLIANT" : "DRIFTED",
+      });
+    }
+  }
+
+  // ─── Exchange: Mailbox Settings (current user) ────────
+  const mailboxSettings = await tryGraphGet(token, "/me/mailboxSettings");
+  if (mailboxSettings.data) {
+    const ms = mailboxSettings.data as any;
+    resources.push({
+      workload: "EXO", resourceType: "EXOMailboxSettings",
+      displayName: "Current User Mailbox Settings",
+      properties: { TimeZone: ms.timeZone, DateFormat: ms.dateFormat, TimeFormat: ms.timeFormat, Language: ms.language, AutomaticRepliesSetting: ms.automaticRepliesSetting?.status, DelegateMeetingMessageDeliveryOptions: ms.delegateMeetingMessageDeliveryOptions },
+      status: "COMPLIANT",
+    });
+  }
+
   if (resources.length === 0) {
     return {
-      success: false,
-      skipped: true,
-      reason: "No M365 configuration data accessible via Graph API with current permissions",
-      error: "Add Policy.Read.All and Directory.Read.All permissions for richer data. You can also use the Azure Automation runbook for full M365DSC exports.",
+      success: false, skipped: true,
+      reason: "No M365 configuration data accessible with current permissions",
+      error: "Add the required API permissions and reconnect. See Settings for details.",
     };
   }
 
-  // Upsert resources into M365Resource table
-  // Clear existing Graph-synced resources
+  // Clear existing and write new
   await prisma.m365Resource.deleteMany({ where: { tenantId } });
 
-  // Create snapshot
   const workloads = [...new Set(resources.map((r) => r.workload))];
   const compliantCount = resources.filter((r) => r.status === "COMPLIANT").length;
 
   const snapshot = await prisma.m365Snapshot.create({
     data: {
-      tenantId,
-      label: `Graph API Sync — ${new Date().toISOString().split("T")[0]}`,
-      exportMode: "GraphAPI",
-      workloads: workloads as any[],
-      resourceCount: resources.length,
-      compliantCount,
-      driftedCount: resources.length - compliantCount,
+      tenantId, label: `Graph API Sync — ${new Date().toISOString().split("T")[0]}`,
+      exportMode: "GraphAPI", workloads: workloads as any[],
+      resourceCount: resources.length, compliantCount, driftedCount: resources.length - compliantCount,
     },
   });
 
   for (const res of resources) {
     await prisma.m365Resource.create({
       data: {
-        tenantId,
-        snapshotId: snapshot.id,
-        workload: res.workload as any,
-        resourceType: res.resourceType,
-        displayName: res.displayName,
-        primaryKey: res.displayName,
-        properties: res.properties as object,
-        desiredState: res.properties as object,
-        actualState: res.properties as object,
-        status: res.status,
-        differingProperties: res.status === "DRIFTED" ? ["state"] : [],
-        lastChecked: new Date(),
+        tenantId, snapshotId: snapshot.id, workload: res.workload as any,
+        resourceType: res.resourceType, displayName: res.displayName, primaryKey: res.displayName,
+        properties: res.properties as object, desiredState: res.properties as object, actualState: res.properties as object,
+        status: res.status, differingProperties: res.status === "DRIFTED" ? ["state"] : [], lastChecked: new Date(),
       },
     });
   }

@@ -278,7 +278,7 @@ function SettingsContent() {
               <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
                 <p className="text-xs text-dsc-text-secondary mb-2">Permissions requested:</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {["User.Read", "Organization.Read.All", "Directory.Read.All", "Policy.Read.All", "SensitivityLabel.Read"].map((p) => (
+                  {["User.Read", "Organization.Read.All", "Directory.Read.All", "Policy.Read.All", "SensitivityLabel.Read", "SecurityEvents.Read.All", "DeviceManagementConfiguration.Read.All", "MailboxSettings.Read", "RoleManagement.Read.Directory"].map((p) => (
                     <span key={p} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-2 py-0.5 rounded-full flex items-center gap-1">
                       <Lock className="h-2.5 w-2.5" />{p}
                     </span>

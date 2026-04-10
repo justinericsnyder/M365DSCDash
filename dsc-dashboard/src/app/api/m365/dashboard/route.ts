@@ -1,35 +1,43 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { cacheGet, cacheSet } from "@/lib/redis";
+import { resolveTenantContext } from "@/lib/tenant-resolver";
 
 export async function GET() {
   try {
-    const cacheKey = "m365:dashboard";
+    const ctx = await resolveTenantContext();
+
+    if (!ctx.tenantId) {
+      return NextResponse.json({
+        hasTenant: false,
+        isAuthenticated: ctx.isAuthenticated,
+        isDemoMode: ctx.isDemoMode,
+      });
+    }
+
+    const cacheKey = `m365:dashboard:${ctx.tenantId}`;
     const cached = await cacheGet(cacheKey);
     if (cached) return NextResponse.json(cached);
 
-    const tenant = await prisma.m365Tenant.findFirst({
+    const tenant = await prisma.m365Tenant.findUnique({
+      where: { id: ctx.tenantId },
       include: { snapshots: { take: 1, orderBy: { createdAt: "desc" } } },
     });
 
-    if (!tenant) {
-      return NextResponse.json({ hasTenant: false });
-    }
+    if (!tenant) return NextResponse.json({ hasTenant: false });
 
-    // Workload breakdown
     const workloadStats = await prisma.m365Resource.groupBy({
       by: ["workload"],
-      where: { tenantId: tenant.id },
+      where: { tenantId: ctx.tenantId },
       _count: true,
     });
 
     const workloadCompliance = await prisma.m365Resource.groupBy({
       by: ["workload", "status"],
-      where: { tenantId: tenant.id },
+      where: { tenantId: ctx.tenantId },
       _count: true,
     });
 
-    // Build workload summary
     const workloads: Record<string, { total: number; compliant: number; drifted: number }> = {};
     for (const ws of workloadStats) {
       workloads[ws.workload] = { total: ws._count, compliant: 0, drifted: 0 };
@@ -40,41 +48,35 @@ export async function GET() {
       else workloads[wc.workload].drifted += wc._count;
     }
 
-    const totalResources = await prisma.m365Resource.count({ where: { tenantId: tenant.id } });
-    const compliantResources = await prisma.m365Resource.count({ where: { tenantId: tenant.id, status: "COMPLIANT" } });
+    const totalResources = await prisma.m365Resource.count({ where: { tenantId: ctx.tenantId } });
+    const compliantResources = await prisma.m365Resource.count({ where: { tenantId: ctx.tenantId, status: "COMPLIANT" } });
     const driftedResources = await prisma.m365Resource.findMany({
-      where: { tenantId: tenant.id, status: { not: "COMPLIANT" } },
+      where: { tenantId: ctx.tenantId, status: { not: "COMPLIANT" } },
       orderBy: { updatedAt: "desc" },
       take: 20,
     });
 
-    // Resource type breakdown
     const resourceTypes = await prisma.m365Resource.groupBy({
       by: ["resourceType"],
-      where: { tenantId: tenant.id },
+      where: { tenantId: ctx.tenantId },
       _count: true,
     });
 
     const stats = {
       hasTenant: true,
+      isDemoMode: ctx.isDemoMode,
       tenant: {
-        id: tenant.id,
-        tenantId: tenant.tenantId,
-        displayName: tenant.displayName,
-        tenantName: tenant.tenantName,
-        defaultDomain: tenant.defaultDomain,
-        lastExport: tenant.lastExport,
-        lastDriftCheck: tenant.lastDriftCheck,
+        id: tenant.id, tenantId: tenant.tenantId, displayName: tenant.displayName,
+        tenantName: tenant.tenantName, defaultDomain: tenant.defaultDomain,
+        lastExport: tenant.lastExport, lastDriftCheck: tenant.lastDriftCheck,
       },
       latestSnapshot: tenant.snapshots[0] || null,
       totals: {
-        resources: totalResources,
-        compliant: compliantResources,
+        resources: totalResources, compliant: compliantResources,
         drifted: totalResources - compliantResources,
         complianceRate: totalResources > 0 ? Math.round((compliantResources / totalResources) * 100) : 0,
       },
-      workloads,
-      driftedResources,
+      workloads, driftedResources,
       resourceTypes: resourceTypes.map((rt) => ({ type: rt.resourceType, count: rt._count })),
     };
 
