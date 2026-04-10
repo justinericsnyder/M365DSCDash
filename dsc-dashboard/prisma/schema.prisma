@@ -38,6 +38,9 @@ model M365Tenant {
   snapshots  M365Snapshot[]
   resources  M365Resource[]
   agents     Agent365[]
+  sensitivityLabels PurviewSensitivityLabel[]
+  protectionScopes  PurviewProtectionScope[]
+  labelDrifts       PurviewLabelDrift[]
 }
 
 model Node {
@@ -280,4 +283,91 @@ model Agent365 {
 
   @@index([tenantId, type])
   @@index([tenantId, isBlocked])
+}
+
+// ─── Microsoft Purview Models ───────────────────────────
+
+enum LabelDriftType {
+  PRIORITY_CHANGED
+  PROTECTION_CHANGED
+  SCOPE_CHANGED
+  LABEL_DISABLED
+  LABEL_ENABLED
+  LABEL_ADDED
+  LABEL_REMOVED
+  SUBLABEL_CHANGED
+  COLOR_CHANGED
+  ENCRYPTION_CHANGED
+  ENDPOINT_PROTECTION_CHANGED
+}
+
+model PurviewSensitivityLabel {
+  id                          String   @id @default(cuid())
+  tenantId                    String
+  labelId                     String
+  name                        String
+  displayName                 String
+  description                 String?
+  tooltip                     String?
+  color                       String?
+  priority                    Int
+  sensitivity                 Int      @default(0)
+  isEnabled                   Boolean  @default(true)
+  isDefault                   Boolean  @default(false)
+  isEndpointProtectionEnabled Boolean  @default(false)
+  hasProtection               Boolean  @default(false)
+  applicableTo                String[]
+  contentFormats              String[]
+  applicationMode             String   @default("manual")
+  actionSource                String   @default("manual")
+  isAppliable                 Boolean  @default(true)
+  parentLabelId               String?
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  tenant    M365Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sublabels PurviewSensitivityLabel[]   @relation("LabelHierarchy")
+  parent    PurviewSensitivityLabel?    @relation("LabelHierarchy", fields: [parentLabelId], references: [id])
+  driftEvents PurviewLabelDrift[]
+
+  @@unique([tenantId, labelId])
+  @@index([tenantId, priority])
+}
+
+model PurviewProtectionScope {
+  id              String   @id @default(cuid())
+  tenantId        String
+  userId          String?
+  userDisplayName String?
+  activities      String[]
+  executionMode   String
+  locationType    String?
+  locationValue   String?
+  policyActions   Json?
+  restrictionAction String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant M365Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, executionMode])
+}
+
+model PurviewLabelDrift {
+  id              String   @id @default(cuid())
+  tenantId        String
+  labelId         String
+  driftType       LabelDriftType
+  field           String
+  previousValue   String?
+  currentValue    String?
+  severity        Severity @default(MEDIUM)
+  resolved        Boolean  @default(false)
+  resolvedAt      DateTime?
+  detectedAt      DateTime @default(now())
+
+  tenant M365Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  label  PurviewSensitivityLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, resolved])
 }

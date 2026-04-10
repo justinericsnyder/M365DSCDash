@@ -13,12 +13,14 @@ import {
   Blocks,
   Cloud,
   Bot,
+  ShieldCheck,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, color: "text-dsc-blue" },
   { href: "/m365", label: "M365 DSC", icon: Cloud, color: "text-dsc-blue" },
-  { href: "/agents", label: "Agent Registry", icon: Bot, color: "text-purple-600" },
+  { href: "/purview", label: "Purview Labels", icon: ShieldCheck, color: "text-purple-600" },
+  { href: "/agents", label: "Agent Registry", icon: Bot, color: "text-dsc-green" },
   { href: "/nodes", label: "Nodes", icon: Server, color: "text-dsc-green" },
   { href: "/configurations", label: "Configurations", icon: FileCode2, color: "text-dsc-yellow" },
   { href: "/resources", label: "Resources", icon: Blocks, color: "text-dsc-red" },
