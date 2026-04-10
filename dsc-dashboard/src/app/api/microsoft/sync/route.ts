@@ -325,6 +325,112 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
     });
   }
 
+  // ─── OneDrive: Drive Settings ─────────────────────────
+  const myDrive = await tryGraphGet(token, "/me/drive");
+  if (myDrive.data) {
+    const d = myDrive.data as any;
+    resources.push({
+      workload: "OD", resourceType: "ODSettings",
+      displayName: "OneDrive — Current User",
+      properties: { DriveType: d.driveType, QuotaTotal: d.quota?.total, QuotaUsed: d.quota?.used, QuotaRemaining: d.quota?.remaining, QuotaState: d.quota?.state, WebUrl: d.webUrl },
+      status: d.quota?.state === "normal" ? "COMPLIANT" : "DRIFTED",
+    });
+  }
+
+  // ─── OneDrive / SharePoint: Sites ─────────────────────
+  const sites = await tryGraphGet(token, "/sites?search=*&$top=20");
+  if (sites.data) {
+    for (const s of ((sites.data as any).value || []).slice(0, 20)) {
+      resources.push({
+        workload: "SPO", resourceType: "SPOSite",
+        displayName: s.displayName || s.name || s.webUrl || "Site",
+        properties: { DisplayName: s.displayName, WebUrl: s.webUrl, IsPersonalSite: s.isPersonalSite, CreatedDateTime: s.createdDateTime, LastModifiedDateTime: s.lastModifiedDateTime, SiteId: s.id },
+        status: "COMPLIANT",
+      });
+    }
+  }
+
+  // ─── Teams: Joined Teams ──────────────────────────────
+  const teams = await tryGraphGet(token, "/me/joinedTeams");
+  if (teams.data) {
+    for (const t of ((teams.data as any).value || [])) {
+      resources.push({
+        workload: "TEAMS", resourceType: "TeamsTeam",
+        displayName: t.displayName || "Team",
+        properties: { DisplayName: t.displayName, Description: t.description, Visibility: t.visibility, IsArchived: t.isArchived, WebUrl: t.webUrl, TenantId: t.tenantId },
+        status: t.isArchived ? "DRIFTED" : "COMPLIANT",
+      });
+    }
+  }
+
+  // ─── Teams: Team Settings (per team) ──────────────────
+  const teamsForSettings = await tryGraphGet(token, "/me/joinedTeams?$select=id,displayName");
+  if (teamsForSettings.data) {
+    for (const t of ((teamsForSettings.data as any).value || []).slice(0, 10)) {
+      const teamDetail = await tryGraphGet(token, `/teams/${t.id}`);
+      if (teamDetail.data) {
+        const td = teamDetail.data as any;
+        resources.push({
+          workload: "TEAMS", resourceType: "TeamsTeamSettings",
+          displayName: `${td.displayName || t.displayName} — Settings`,
+          properties: {
+            DisplayName: td.displayName,
+            MemberSettings: { AllowCreateUpdateChannels: td.memberSettings?.allowCreateUpdateChannels, AllowDeleteChannels: td.memberSettings?.allowDeleteChannels, AllowAddRemoveApps: td.memberSettings?.allowAddRemoveApps, AllowCreateUpdateRemoveTabs: td.memberSettings?.allowCreateUpdateRemoveTabs, AllowCreateUpdateRemoveConnectors: td.memberSettings?.allowCreateUpdateRemoveConnectors },
+            GuestSettings: { AllowCreateUpdateChannels: td.guestSettings?.allowCreateUpdateChannels, AllowDeleteChannels: td.guestSettings?.allowDeleteChannels },
+            MessagingSettings: { AllowUserEditMessages: td.messagingSettings?.allowUserEditMessages, AllowUserDeleteMessages: td.messagingSettings?.allowUserDeleteMessages, AllowOwnerDeleteMessages: td.messagingSettings?.allowOwnerDeleteMessages, AllowTeamMentions: td.messagingSettings?.allowTeamMentions, AllowChannelMentions: td.messagingSettings?.allowChannelMentions },
+            FunSettings: { AllowGiphy: td.funSettings?.allowGiphy, GiphyContentRating: td.funSettings?.giphyContentRating, AllowStickersAndMemes: td.funSettings?.allowStickersAndMemes, AllowCustomMemes: td.funSettings?.allowCustomMemes },
+          },
+          status: "COMPLIANT",
+        });
+      }
+    }
+  }
+
+  // ─── Teams: Channels (per team, top 5 teams) ──────────
+  const teamsForChannels = await tryGraphGet(token, "/me/joinedTeams?$select=id,displayName&$top=5");
+  if (teamsForChannels.data) {
+    for (const t of ((teamsForChannels.data as any).value || [])) {
+      const channels = await tryGraphGet(token, `/teams/${t.id}/channels`);
+      if (channels.data) {
+        for (const ch of ((channels.data as any).value || [])) {
+          resources.push({
+            workload: "TEAMS", resourceType: "TeamsChannel",
+            displayName: `${t.displayName} / ${ch.displayName}`,
+            properties: { TeamName: t.displayName, ChannelName: ch.displayName, MembershipType: ch.membershipType, WebUrl: ch.webUrl, Description: ch.description },
+            status: "COMPLIANT",
+          });
+        }
+      }
+    }
+  }
+
+  // ─── Power Platform: Environments (beta) ──────────────
+  const ppEnvironments = await tryGraphGet(token, "/admin/powerPlatform/environments", true);
+  if (ppEnvironments.data) {
+    for (const env of ((ppEnvironments.data as any).value || [])) {
+      resources.push({
+        workload: "PP", resourceType: "PPEnvironment",
+        displayName: env.displayName || env.name || "Environment",
+        properties: { DisplayName: env.displayName, Name: env.name, Type: env.environmentType, State: env.state, Region: env.region, CreatedTime: env.createdTime, IsDefault: env.isDefault },
+        status: env.state === "Ready" ? "COMPLIANT" : "DRIFTED",
+      });
+    }
+  }
+
+  // ─── Fabric / Power BI: Capacities (beta) ─────────────
+  // Note: Fabric APIs are limited — this pulls what's available
+  const fabricCapacities = await tryGraphGet(token, "/admin/fabric/capacities", true);
+  if (fabricCapacities.data) {
+    for (const cap of ((fabricCapacities.data as any).value || [])) {
+      resources.push({
+        workload: "FABRIC", resourceType: "FabricCapacity",
+        displayName: cap.displayName || cap.name || "Capacity",
+        properties: { DisplayName: cap.displayName, Sku: cap.sku, State: cap.state, Region: cap.region, Admins: cap.admins },
+        status: cap.state === "Active" ? "COMPLIANT" : "DRIFTED",
+      });
+    }
+  }
+
   if (resources.length === 0) {
     return {
       success: false, skipped: true,

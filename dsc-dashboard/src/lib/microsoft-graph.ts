@@ -45,6 +45,10 @@ const SCOPES = [
   "MailboxSettings.Read",                        // Exchange mailbox settings
   "SharePointTenantSettings.Read.All",           // SharePoint admin
   "RoleManagement.Read.Directory",               // Role definitions & assignments
+  "Sites.Read.All",                              // SharePoint sites, OneDrive
+  "Team.ReadBasic.All",                          // Teams list
+  "TeamSettings.Read.All",                       // Teams settings per team
+  "Channel.ReadBasic.All",                       // Teams channels
 ].join(" ");
 
 // ─── OAuth2 Authorization Code + PKCE ───────────────────
