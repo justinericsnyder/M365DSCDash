@@ -51,17 +51,19 @@ export async function POST() {
 
     const results: Record<string, SyncResult> = {};
 
-    // ─── 1. Sync Sensitivity Labels (Purview) ───────────
-    // Try multiple endpoints in order of preference
+    // ─── 1. Sync M365 DSC via Graph APIs ────────────────
+    results.m365Dsc = await syncM365DscViaGraph(accessToken, tenant.id);
+
+    // ─── 2. Sync Sensitivity Labels (Purview) ───────────
     results.purviewLabels = await syncPurviewLabels(accessToken, tenant.id);
 
-    // ─── 2. Sync Agent Registry (Copilot Packages) ─────
+    // ─── 3. Sync Agent Registry (Copilot Packages) ─────
     results.agents = await syncAgentRegistry(accessToken, tenant.id);
 
-    // ─── 3. Sync Organization Info ──────────────────────
+    // ─── 4. Sync Organization Info ──────────────────────
     results.organization = await syncOrganization(accessToken, tenant.id, tenant.defaultDomain, tenant.displayName);
 
-    // ─── 4. Sync User Profile ───────────────────────────
+    // ─── 5. Sync User Profile ───────────────────────────
     results.profile = await syncUserProfile(accessToken, tenant.id);
 
     // Invalidate caches
@@ -89,6 +91,213 @@ export async function POST() {
     const msg = error instanceof Error ? error.message : "Sync failed";
     return NextResponse.json({ error: msg }, { status: 500, headers });
   }
+}
+
+// ─── M365 DSC via Graph APIs ────────────────────────────
+// Pulls tenant configuration data that maps to M365DSC workloads
+// using native Graph API endpoints (no PowerShell needed)
+
+async function syncM365DscViaGraph(token: string, tenantId: string): Promise<SyncResult> {
+  const resources: Array<{
+    workload: string;
+    resourceType: string;
+    displayName: string;
+    properties: Record<string, unknown>;
+    status: "COMPLIANT" | "DRIFTED";
+  }> = [];
+
+  // ─── AAD: Conditional Access Policies ─────────────────
+  const caPolicies = await tryGraphGet(token, "/identity/conditionalAccess/policies");
+  if (caPolicies.data) {
+    for (const p of ((caPolicies.data as any).value || [])) {
+      resources.push({
+        workload: "AAD",
+        resourceType: "AADConditionalAccessPolicy",
+        displayName: p.displayName || "Unnamed Policy",
+        properties: {
+          DisplayName: p.displayName,
+          State: p.state,
+          Conditions: p.conditions,
+          GrantControls: p.grantControls,
+          SessionControls: p.sessionControls,
+          CreatedDateTime: p.createdDateTime,
+          ModifiedDateTime: p.modifiedDateTime,
+        },
+        status: p.state === "enabled" ? "COMPLIANT" : "DRIFTED",
+      });
+    }
+  }
+
+  // ─── AAD: Authentication Methods Policy ───────────────
+  const authMethods = await tryGraphGet(token, "/policies/authenticationMethodsPolicy");
+  if (authMethods.data) {
+    const policy = authMethods.data as any;
+    const methods = policy.authenticationMethodConfigurations || [];
+    for (const m of methods) {
+      resources.push({
+        workload: "AAD",
+        resourceType: "AADAuthenticationMethodPolicy",
+        displayName: m["@odata.type"]?.replace("#microsoft.graph.", "") || m.id || "Auth Method",
+        properties: { Id: m.id, State: m.state, ...m },
+        status: m.state === "enabled" ? "COMPLIANT" : "DRIFTED",
+      });
+    }
+  }
+
+  // ─── AAD: Group Settings ──────────────────────────────
+  const groupSettings = await tryGraphGet(token, "/groupSettings");
+  if (groupSettings.data) {
+    for (const gs of ((groupSettings.data as any).value || [])) {
+      const values: Record<string, string> = {};
+      for (const v of (gs.values || [])) values[v.name] = v.value;
+      resources.push({
+        workload: "AAD",
+        resourceType: "AADGroupsSettings",
+        displayName: gs.displayName || "Group Settings",
+        properties: { TemplateId: gs.templateId, ...values },
+        status: "COMPLIANT",
+      });
+    }
+  }
+
+  // ─── AAD: Authorization Policy ────────────────────────
+  const authzPolicy = await tryGraphGet(token, "/policies/authorizationPolicy");
+  if (authzPolicy.data) {
+    const p = authzPolicy.data as any;
+    resources.push({
+      workload: "AAD",
+      resourceType: "AADAuthorizationPolicy",
+      displayName: "Authorization Policy",
+      properties: {
+        AllowInvitesFrom: p.allowInvitesFrom,
+        AllowedToSignUpEmailBasedSubscriptions: p.allowedToSignUpEmailBasedSubscriptions,
+        AllowEmailVerifiedUsersToJoinOrganization: p.allowEmailVerifiedUsersToJoinOrganization,
+        BlockMsolPowerShell: p.blockMsolPowerShell,
+        GuestUserRoleId: p.guestUserRoleId,
+        AllowedToUseSspr: p.allowedToUseSspr,
+      },
+      status: p.blockMsolPowerShell ? "COMPLIANT" : "DRIFTED",
+    });
+  }
+
+  // ─── AAD: Security Defaults ───────────────────────────
+  const secDefaults = await tryGraphGet(token, "/policies/identitySecurityDefaultsEnforcementPolicy");
+  if (secDefaults.data) {
+    const sd = secDefaults.data as any;
+    resources.push({
+      workload: "AAD",
+      resourceType: "AADSecurityDefaults",
+      displayName: "Security Defaults",
+      properties: { IsEnabled: sd.isEnabled, DisplayName: sd.displayName },
+      status: sd.isEnabled ? "COMPLIANT" : "DRIFTED",
+    });
+  }
+
+  // ─── SharePoint: Tenant Settings ──────────────────────
+  const spoSettings = await tryGraphGet(token, "/admin/sharepoint/settings", true);
+  if (spoSettings.data) {
+    const s = spoSettings.data as any;
+    resources.push({
+      workload: "SPO",
+      resourceType: "SPOTenantSettings",
+      displayName: "SharePoint Tenant Settings",
+      properties: {
+        SharingCapability: s.sharingCapability,
+        IsResharingByExternalUsersEnabled: s.isResharingByExternalUsersEnabled,
+        IsCommentingOnSitePagesEnabled: s.isCommentingOnSitePagesEnabled,
+        IsSiteCreationEnabled: s.isSiteCreationEnabled,
+        IsSitePagesCreationEnabled: s.isSitePagesCreationEnabled,
+        SharingDomainRestrictionMode: s.sharingDomainRestrictionMode,
+      },
+      status: s.sharingCapability === "disabled" || s.sharingCapability === "externalUserSharingOnly" ? "COMPLIANT" : "DRIFTED",
+    });
+  }
+
+  // ─── Teams: App Settings ──────────────────────────────
+  const teamsApps = await tryGraphGet(token, "/teamwork/teamsAppSettings", true);
+  if (teamsApps.data) {
+    const t = teamsApps.data as any;
+    resources.push({
+      workload: "TEAMS",
+      resourceType: "TeamsAppSettings",
+      displayName: "Teams App Settings",
+      properties: {
+        IsChatResourceSpecificConsentEnabled: t.isChatResourceSpecificConsentEnabled,
+      },
+      status: "COMPLIANT",
+    });
+  }
+
+  // ─── Domains ──────────────────────────────────────────
+  const domains = await tryGraphGet(token, "/domains");
+  if (domains.data) {
+    for (const d of ((domains.data as any).value || [])) {
+      resources.push({
+        workload: "AAD",
+        resourceType: "AADDomain",
+        displayName: d.id,
+        properties: {
+          Id: d.id,
+          IsDefault: d.isDefault,
+          IsVerified: d.isVerified,
+          IsAdminManaged: d.isAdminManaged,
+          AuthenticationType: d.authenticationType,
+          SupportedServices: d.supportedServices,
+        },
+        status: d.isVerified ? "COMPLIANT" : "DRIFTED",
+      });
+    }
+  }
+
+  if (resources.length === 0) {
+    return {
+      success: false,
+      skipped: true,
+      reason: "No M365 configuration data accessible via Graph API with current permissions",
+      error: "Add Policy.Read.All and Directory.Read.All permissions for richer data. You can also use the Azure Automation runbook for full M365DSC exports.",
+    };
+  }
+
+  // Upsert resources into M365Resource table
+  // Clear existing Graph-synced resources
+  await prisma.m365Resource.deleteMany({ where: { tenantId } });
+
+  // Create snapshot
+  const workloads = [...new Set(resources.map((r) => r.workload))];
+  const compliantCount = resources.filter((r) => r.status === "COMPLIANT").length;
+
+  const snapshot = await prisma.m365Snapshot.create({
+    data: {
+      tenantId,
+      label: `Graph API Sync — ${new Date().toISOString().split("T")[0]}`,
+      exportMode: "GraphAPI",
+      workloads: workloads as any[],
+      resourceCount: resources.length,
+      compliantCount,
+      driftedCount: resources.length - compliantCount,
+    },
+  });
+
+  for (const res of resources) {
+    await prisma.m365Resource.create({
+      data: {
+        tenantId,
+        snapshotId: snapshot.id,
+        workload: res.workload as any,
+        resourceType: res.resourceType,
+        displayName: res.displayName,
+        primaryKey: res.displayName,
+        properties: res.properties as object,
+        desiredState: res.properties as object,
+        actualState: res.properties as object,
+        status: res.status,
+        differingProperties: res.status === "DRIFTED" ? ["state"] : [],
+        lastChecked: new Date(),
+      },
+    });
+  }
+
+  return { success: true, count: resources.length };
 }
 
 // ─── Purview Labels ─────────────────────────────────────

@@ -19,6 +19,7 @@ model User {
   approvedBy    String?
   approvedAt    DateTime?
   lastLoginAt   DateTime?
+  apiKeyHash    String?   @unique  // SHA-256 hash of API key for M365DSC script auth
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

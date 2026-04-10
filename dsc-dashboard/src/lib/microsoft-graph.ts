@@ -36,8 +36,9 @@ const SCOPES = [
   "offline_access",                    // Refresh token
   "User.Read",                         // Basic profile
   "Organization.Read.All",             // Tenant info
+  "Directory.Read.All",                // Group settings, domains
+  "Policy.Read.All",                   // Conditional access, auth methods, security defaults
   "SensitivityLabel.Read",             // Purview labels
-  "InformationProtectionPolicy.Read",  // Label policies
 ].join(" ");
 
 // ─── OAuth2 Authorization Code + PKCE ───────────────────
