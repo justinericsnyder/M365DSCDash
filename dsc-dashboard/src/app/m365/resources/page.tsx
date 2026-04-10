@@ -1,0 +1,264 @@
+"use client";
+
+import { Suspense } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { StatusDot } from "@/components/ui/status-dot";
+import { timeAgo } from "@/lib/utils";
+import {
+  Cloud,
+  Shield,
+  Mail,
+  Share2,
+  Users,
+  Lock,
+  Smartphone,
+  ShieldCheck,
+  HardDrive,
+  Search,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  ArrowLeft,
+} from "lucide-react";
+import Link from "next/link";
+
+const WORKLOAD_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+  AAD: { label: "Entra ID", icon: Shield, color: "text-dsc-blue" },
+  EXO: { label: "Exchange", icon: Mail, color: "text-dsc-red" },
+  SPO: { label: "SharePoint", icon: Share2, color: "text-dsc-green" },
+  TEAMS: { label: "Teams", icon: Users, color: "text-purple-600" },
+  SC: { label: "Security", icon: Lock, color: "text-dsc-yellow" },
+  INTUNE: { label: "Intune", icon: Smartphone, color: "text-cyan-600" },
+  DEFENDER: { label: "Defender", icon: ShieldCheck, color: "text-orange-600" },
+  OD: { label: "OneDrive", icon: HardDrive, color: "text-dsc-blue" },
+};
+
+interface M365Resource {
+  id: string;
+  workload: string;
+  resourceType: string;
+  displayName: string;
+  primaryKey: string | null;
+  properties: Record<string, unknown>;
+  desiredState: Record<string, unknown> | null;
+  actualState: Record<string, unknown> | null;
+  status: string;
+  differingProperties: string[];
+  lastChecked: string | null;
+}
+
+export default function M365ResourcesPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" /></div>}>
+      <M365ResourcesContent />
+    </Suspense>
+  );
+}
+
+function M365ResourcesContent() {
+  const searchParams = useSearchParams();
+  const initialWorkload = searchParams.get("workload") || "";
+
+  const [resources, setResources] = useState<M365Resource[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [workloadFilter, setWorkloadFilter] = useState(initialWorkload);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const fetchResources = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (workloadFilter) params.set("workload", workloadFilter);
+      if (statusFilter) params.set("status", statusFilter);
+      if (search) params.set("search", search);
+      const res = await fetch(`/api/m365/resources?${params}`);
+      const json = await res.json();
+      setResources(json);
+    } finally {
+      setLoading(false);
+    }
+  }, [workloadFilter, statusFilter, search]);
+
+  useEffect(() => { fetchResources(); }, [fetchResources]);
+
+  // Group by resource type
+  const grouped = resources.reduce(
+    (acc, r) => {
+      const key = `${r.workload}/${r.resourceType}`;
+      if (!acc[key]) acc[key] = { workload: r.workload, resourceType: r.resourceType, items: [] };
+      acc[key].items.push(r);
+      return acc;
+    },
+    {} as Record<string, { workload: string; resourceType: string; items: M365Resource[] }>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <Link href="/m365">
+            <Button variant="ghost" size="sm" className="mb-2">
+              <ArrowLeft className="h-4 w-4" /> Back to M365 Dashboard
+            </Button>
+          </Link>
+          <h2 className="text-2xl font-bold text-dsc-text">M365 Resources</h2>
+          <p className="text-sm text-dsc-text-secondary mt-1">
+            {resources.length} resources
+            {workloadFilter && ` in ${WORKLOAD_META[workloadFilter]?.label || workloadFilter}`}
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative w-64">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dsc-text-secondary" />
+          <input
+            type="text"
+            placeholder="Search resources..."
+            className="h-9 w-full rounded-lg border border-dsc-border bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <select
+          className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm"
+          value={workloadFilter}
+          onChange={(e) => setWorkloadFilter(e.target.value)}
+        >
+          <option value="">All Workloads</option>
+          {Object.entries(WORKLOAD_META).map(([key, meta]) => (
+            <option key={key} value={key}>{meta.label}</option>
+          ))}
+        </select>
+        <select
+          className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="">All Statuses</option>
+          <option value="COMPLIANT">Compliant</option>
+          <option value="DRIFTED">Drifted</option>
+          <option value="MISSING">Missing</option>
+          <option value="ERROR">Error</option>
+        </select>
+        {(workloadFilter || statusFilter || search) && (
+          <button
+            className="text-xs text-dsc-blue hover:underline self-center"
+            onClick={() => { setWorkloadFilter(""); setStatusFilter(""); setSearch(""); }}
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
+
+      {/* Resources */}
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" />
+        </div>
+      ) : resources.length === 0 ? (
+        <EmptyState
+          icon={Cloud}
+          title="No M365 resources found"
+          description="Import a Microsoft365DSC JSON report or load demo data from the M365 DSC page."
+        />
+      ) : (
+        <div className="space-y-4">
+          {Object.values(grouped).map((group) => {
+            const meta = WORKLOAD_META[group.workload] || { label: group.workload, icon: Cloud, color: "text-gray-600" };
+            const Icon = meta.icon;
+            const compliant = group.items.filter((r) => r.status === "COMPLIANT").length;
+
+            return (
+              <Card key={`${group.workload}/${group.resourceType}`}>
+                <div className="flex items-center gap-3 mb-3">
+                  <Icon className={`h-4 w-4 ${meta.color}`} />
+                  <h3 className="font-semibold text-sm text-dsc-text">{group.resourceType}</h3>
+                  <Badge variant={group.workload.toLowerCase() === "aad" ? "active" : "default"}>
+                    {meta.label}
+                  </Badge>
+                  <span className="text-xs text-dsc-text-secondary ml-auto">
+                    {compliant}/{group.items.length} compliant
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {group.items.map((res) => {
+                    const isExpanded = expandedId === res.id;
+                    return (
+                      <div key={res.id}>
+                        <div
+                          className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border cursor-pointer hover:border-dsc-blue/30 transition-colors"
+                          onClick={() => setExpandedId(isExpanded ? null : res.id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            {res.status === "COMPLIANT" ? (
+                              <CheckCircle2 className="h-4 w-4 text-dsc-green flex-shrink-0" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-dsc-red flex-shrink-0" />
+                            )}
+                            <div>
+                              <p className="font-medium text-sm text-dsc-text">{res.displayName}</p>
+                              {res.primaryKey && res.primaryKey !== res.displayName && (
+                                <p className="text-xs text-dsc-text-secondary">Key: {res.primaryKey}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {res.differingProperties.length > 0 && (
+                              <div className="flex gap-1">
+                                {res.differingProperties.map((p) => (
+                                  <Badge key={p} variant="drifted">{p}</Badge>
+                                ))}
+                              </div>
+                            )}
+                            <StatusDot status={res.status} pulse={res.status !== "COMPLIANT"} />
+                            <span className="text-xs text-dsc-text-secondary">{timeAgo(res.lastChecked)}</span>
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4 text-dsc-text-secondary" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-dsc-text-secondary" />
+                            )}
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="mt-2 ml-7 grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-xs font-medium text-dsc-text-secondary mb-1">
+                                {res.status === "COMPLIANT" ? "Current State" : "Desired State"}
+                              </p>
+                              <pre className="code-editor bg-dsc-green-50 rounded-lg p-3 text-xs overflow-auto max-h-48 border border-dsc-green/20">
+                                {JSON.stringify(res.status === "COMPLIANT" ? res.properties : res.desiredState, null, 2)}
+                              </pre>
+                            </div>
+                            {res.status !== "COMPLIANT" && (
+                              <div>
+                                <p className="text-xs font-medium text-dsc-text-secondary mb-1">Actual State</p>
+                                <pre className="code-editor bg-dsc-red-50 rounded-lg p-3 text-xs overflow-auto max-h-48 border border-dsc-red/20">
+                                  {JSON.stringify(res.actualState, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

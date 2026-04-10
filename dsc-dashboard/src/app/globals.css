@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --color-red: #E53E3E;
+  --color-red-light: #FED7D7;
+  --color-red-50: #FFF5F5;
+  --color-blue: #3182CE;
+  --color-blue-light: #BEE3F8;
+  --color-blue-50: #EBF8FF;
+  --color-green: #38A169;
+  --color-green-light: #C6F6D5;
+  --color-green-50: #F0FFF4;
+  --color-yellow: #D69E2E;
+  --color-yellow-light: #FEFCBF;
+  --color-yellow-50: #FFFFF0;
+  --color-bg: #FAFBFC;
+  --color-surface: #FFFFFF;
+  --color-border: #E2E8F0;
+  --color-text: #1A202C;
+  --color-text-secondary: #718096;
+  --color-sidebar: #F7FAFC;
+}
+
+@theme {
+  --color-dsc-red: var(--color-red);
+  --color-dsc-red-light: var(--color-red-light);
+  --color-dsc-red-50: var(--color-red-50);
+  --color-dsc-blue: var(--color-blue);
+  --color-dsc-blue-light: var(--color-blue-light);
+  --color-dsc-blue-50: var(--color-blue-50);
+  --color-dsc-green: var(--color-green);
+  --color-dsc-green-light: var(--color-green-light);
+  --color-dsc-green-50: var(--color-green-50);
+  --color-dsc-yellow: var(--color-yellow);
+  --color-dsc-yellow-light: var(--color-yellow-light);
+  --color-dsc-yellow-50: var(--color-yellow-50);
+  --color-dsc-bg: var(--color-bg);
+  --color-dsc-surface: var(--color-surface);
+  --color-dsc-border: var(--color-border);
+  --color-dsc-text: var(--color-text);
+  --color-dsc-text-secondary: var(--color-text-secondary);
+  --color-dsc-sidebar: var(--color-sidebar);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #A0AEC0; }
+
+/* Card hover effect */
+.card-hover {
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+
+/* Status pulse animation */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* Code editor styling */
+.code-editor {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  tab-size: 2;
+}

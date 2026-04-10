@@ -1,0 +1,283 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  nodes          Node[]
+  configurations Configuration[]
+  driftEvents    DriftEvent[]
+  tenants        M365Tenant[]
+}
+
+model M365Tenant {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique
+  tenantName      String
+  displayName     String
+  defaultDomain   String
+  lastExport      DateTime?
+  lastDriftCheck  DateTime?
+  userId          String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snapshots  M365Snapshot[]
+  resources  M365Resource[]
+  agents     Agent365[]
+}
+
+model Node {
+  id          String   @id @default(cuid())
+  name        String
+  hostname    String
+  platform    Platform
+  status      NodeStatus @default(UNKNOWN)
+  lastSeen    DateTime?
+  lastDrift   DateTime?
+  tags        String[]
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  configurations NodeConfiguration[]
+  driftEvents    DriftEvent[]
+
+  @@unique([hostname, userId])
+}
+
+model Configuration {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  document    Json
+  version     Int      @default(1)
+  status      ConfigStatus @default(DRAFT)
+  userId      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nodes NodeConfiguration[]
+  resources ResourceInstance[]
+}
+
+model ResourceInstance {
+  id              String   @id @default(cuid())
+  name            String
+  resourceType    String
+  properties      Json
+  desiredState    Json?
+  actualState     Json?
+  inDesiredState  Boolean  @default(false)
+  lastChecked     DateTime?
+  configurationId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  configuration Configuration @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+  driftEvents   DriftEvent[]
+}
+
+model NodeConfiguration {
+  id              String   @id @default(cuid())
+  nodeId          String
+  configurationId String
+  status          ApplyStatus @default(PENDING)
+  lastApplied     DateTime?
+  lastTested      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  node          Node          @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  configuration Configuration @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+
+  @@unique([nodeId, configurationId])
+}
+
+model DriftEvent {
+  id                String   @id @default(cuid())
+  nodeId            String
+  resourceInstanceId String?
+  userId            String
+  severity          Severity @default(MEDIUM)
+  differingProperties String[]
+  desiredState      Json?
+  actualState       Json?
+  resolved          Boolean  @default(false)
+  resolvedAt        DateTime?
+  createdAt         DateTime @default(now())
+
+  node             Node              @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  resourceInstance ResourceInstance? @relation(fields: [resourceInstanceId], references: [id], onDelete: SetNull)
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Platform {
+  WINDOWS
+  LINUX
+  MACOS
+}
+
+enum NodeStatus {
+  COMPLIANT
+  DRIFTED
+  ERROR
+  UNKNOWN
+  OFFLINE
+}
+
+enum ConfigStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum ApplyStatus {
+  PENDING
+  APPLYING
+  APPLIED
+  FAILED
+  DRIFTED
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// ─── Microsoft 365 DSC Models ───────────────────────────
+
+enum M365Workload {
+  AAD
+  EXO
+  INTUNE
+  O365
+  OD
+  PLANNER
+  PP
+  SC
+  SPO
+  TEAMS
+  DEFENDER
+  FABRIC
+  SENTINEL
+  AZURE
+  ADO
+  COMMERCE
+}
+
+enum M365ResourceStatus {
+  COMPLIANT
+  DRIFTED
+  MISSING
+  EXTRA
+  ERROR
+}
+
+model M365Snapshot {
+  id          String   @id @default(cuid())
+  tenantId    String
+  label       String?
+  exportMode  String   @default("Default")
+  workloads   M365Workload[]
+  resourceCount Int    @default(0)
+  compliantCount Int   @default(0)
+  driftedCount   Int   @default(0)
+  rawDocument Json?
+  createdAt   DateTime @default(now())
+
+  tenant    M365Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  resources M365Resource[]
+}
+
+model M365Resource {
+  id              String   @id @default(cuid())
+  tenantId        String
+  snapshotId      String?
+  workload        M365Workload
+  resourceType    String
+  displayName     String
+  primaryKey      String?
+  properties      Json
+  desiredState    Json?
+  actualState     Json?
+  status          M365ResourceStatus @default(COMPLIANT)
+  differingProperties String[]
+  lastChecked     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant   M365Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  snapshot M365Snapshot? @relation(fields: [snapshotId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, workload])
+  @@index([resourceType])
+}
+
+// ─── Agent 365 Registry Models ──────────────────────────
+
+enum AgentType {
+  MICROSOFT
+  EXTERNAL
+  SHARED
+  CUSTOM
+}
+
+enum AgentAvailability {
+  ALL
+  SPECIFIC
+  NONE
+}
+
+model Agent365 {
+  id                  String   @id @default(cuid())
+  tenantId            String
+  packageId           String   @unique
+  displayName         String
+  type                AgentType
+  shortDescription    String?
+  publisher           String?
+  isBlocked           Boolean  @default(false)
+  supportedHosts      String[]
+  elementTypes        String[]
+  platform            String?
+  version             String?
+  manifestVersion     String?
+  manifestId          String?
+  appId               String?
+  availableTo         String   @default("none")
+  deployedTo          String   @default("none")
+  isPinned            Boolean  @default(false)
+  pinnedScope         String?
+  riskCount           Int      @default(0)
+  hasEmbeddedFiles    Boolean  @default(false)
+  sensitivityLabel    String?
+  ownerUserId         String?
+  ownerDisplayName    String?
+  isOwnerless         Boolean  @default(false)
+  lastModifiedDateTime DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  tenant M365Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, type])
+  @@index([tenantId, isBlocked])
+}
