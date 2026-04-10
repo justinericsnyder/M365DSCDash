@@ -104,17 +104,20 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
     displayName: string;
     properties: Record<string, unknown>;
     status: "COMPLIANT" | "DRIFTED";
+    differingProperties: string[];
   }> = [];
 
   // ─── AAD: Conditional Access Policies ─────────────────
   const caPolicies = await tryGraphGet(token, "/identity/conditionalAccess/policies");
   if (caPolicies.data) {
     for (const p of ((caPolicies.data as any).value || [])) {
+      const isDrifted = p.state !== "enabled";
       resources.push({
         workload: "AAD", resourceType: "AADConditionalAccessPolicy",
         displayName: p.displayName || "Unnamed Policy",
         properties: { DisplayName: p.displayName, State: p.state, Conditions: p.conditions, GrantControls: p.grantControls, SessionControls: p.sessionControls, CreatedDateTime: p.createdDateTime, ModifiedDateTime: p.modifiedDateTime },
-        status: p.state === "enabled" ? "COMPLIANT" : "DRIFTED",
+        status: isDrifted ? "DRIFTED" : "COMPLIANT",
+        differingProperties: isDrifted ? ["State"] : [],
       });
     }
   }
@@ -123,11 +126,13 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   const authMethods = await tryGraphGet(token, "/policies/authenticationMethodsPolicy");
   if (authMethods.data) {
     for (const m of ((authMethods.data as any).authenticationMethodConfigurations || [])) {
+      const isDrifted = m.state !== "enabled";
       resources.push({
         workload: "AAD", resourceType: "AADAuthenticationMethodPolicy",
         displayName: m["@odata.type"]?.replace("#microsoft.graph.", "") || m.id || "Auth Method",
         properties: { Id: m.id, State: m.state, ...m },
-        status: m.state === "enabled" ? "COMPLIANT" : "DRIFTED",
+        status: isDrifted ? "DRIFTED" : "COMPLIANT",
+        differingProperties: isDrifted ? ["AuthMethodState"] : [],
       });
     }
   }
@@ -142,7 +147,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         workload: "AAD", resourceType: "AADGroupsSettings",
         displayName: gs.displayName || "Group Settings",
         properties: { TemplateId: gs.templateId, ...values },
-        status: "COMPLIANT",
+        status: "COMPLIANT", differingProperties: [],
       });
     }
   }
@@ -156,6 +161,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
       displayName: "Authorization Policy",
       properties: { AllowInvitesFrom: p.allowInvitesFrom, AllowedToSignUpEmailBasedSubscriptions: p.allowedToSignUpEmailBasedSubscriptions, AllowEmailVerifiedUsersToJoinOrganization: p.allowEmailVerifiedUsersToJoinOrganization, BlockMsolPowerShell: p.blockMsolPowerShell, GuestUserRoleId: p.guestUserRoleId },
       status: p.blockMsolPowerShell ? "COMPLIANT" : "DRIFTED",
+      differingProperties: p.blockMsolPowerShell ? [] : ["BlockMsolPowerShell"],
     });
   }
 
@@ -168,6 +174,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
       displayName: "Security Defaults",
       properties: { IsEnabled: sd.isEnabled, DisplayName: sd.displayName },
       status: sd.isEnabled ? "COMPLIANT" : "DRIFTED",
+      differingProperties: sd.isEnabled ? [] : ["IsEnabled"],
     });
   }
 
@@ -179,7 +186,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         workload: "AAD", resourceType: "AADNamedLocation",
         displayName: loc.displayName || "Named Location",
         properties: { DisplayName: loc.displayName, Type: loc["@odata.type"], IsTrusted: loc.isTrusted, CreatedDateTime: loc.createdDateTime, ...loc },
-        status: "COMPLIANT",
+        status: "COMPLIANT", differingProperties: [],
       });
     }
   }
@@ -192,7 +199,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         workload: "AAD", resourceType: "AADRoleDefinition",
         displayName: role.displayName || "Directory Role",
         properties: { DisplayName: role.displayName, Description: role.description, RoleTemplateId: role.roleTemplateId },
-        status: "COMPLIANT",
+        status: "COMPLIANT", differingProperties: [],
       });
     }
   }
@@ -206,6 +213,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         displayName: d.id,
         properties: { Id: d.id, IsDefault: d.isDefault, IsVerified: d.isVerified, IsAdminManaged: d.isAdminManaged, AuthenticationType: d.authenticationType, SupportedServices: d.supportedServices },
         status: d.isVerified ? "COMPLIANT" : "DRIFTED",
+        differingProperties: d.isVerified ? [] : ["IsVerified"],
       });
     }
   }
@@ -218,7 +226,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
       workload: "AAD", resourceType: "AADCrossTenantAccessPolicy",
       displayName: "Cross-Tenant Access Policy",
       properties: { AllowedCloudEndpoints: ct.allowedCloudEndpoints, IsServiceDefault: ct.isServiceDefault },
-      status: "COMPLIANT",
+      status: "COMPLIANT", differingProperties: [],
     });
   }
 
@@ -226,11 +234,13 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   const spoSettings = await tryGraphGet(token, "/admin/sharepoint/settings", true);
   if (spoSettings.data) {
     const s = spoSettings.data as any;
+    const isDrifted = s.sharingCapability !== "disabled" && s.sharingCapability !== "externalUserSharingOnly";
     resources.push({
       workload: "SPO", resourceType: "SPOTenantSettings",
       displayName: "SharePoint Tenant Settings",
       properties: { SharingCapability: s.sharingCapability, IsResharingByExternalUsersEnabled: s.isResharingByExternalUsersEnabled, IsCommentingOnSitePagesEnabled: s.isCommentingOnSitePagesEnabled, IsSiteCreationEnabled: s.isSiteCreationEnabled, IsSitePagesCreationEnabled: s.isSitePagesCreationEnabled, SharingDomainRestrictionMode: s.sharingDomainRestrictionMode },
-      status: s.sharingCapability === "disabled" || s.sharingCapability === "externalUserSharingOnly" ? "COMPLIANT" : "DRIFTED",
+      status: isDrifted ? "DRIFTED" : "COMPLIANT",
+      differingProperties: isDrifted ? ["SharingCapability"] : [],
     });
   }
 
@@ -242,7 +252,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
       workload: "TEAMS", resourceType: "TeamsAppSettings",
       displayName: "Teams App Settings",
       properties: { IsChatResourceSpecificConsentEnabled: t.isChatResourceSpecificConsentEnabled },
-      status: "COMPLIANT",
+      status: "COMPLIANT", differingProperties: [],
     });
   }
 
@@ -253,8 +263,8 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
       resources.push({
         workload: "INTUNE", resourceType: "IntuneDeviceCompliancePolicy",
         displayName: p.displayName || "Compliance Policy",
-        properties: { DisplayName: p.displayName, Description: p.description, CreatedDateTime: p.createdDateTime, LastModifiedDateTime: p.lastModifiedDateTime, Version: p.version, ...p },
-        status: "COMPLIANT",
+        properties: { DisplayName: p.displayName, Description: p.description, CreatedDateTime: p.createdDateTime, LastModifiedDateTime: p.lastModifiedDateTime, Version: p.version },
+        status: "COMPLIANT", differingProperties: [],
       });
     }
   }
@@ -267,7 +277,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         workload: "INTUNE", resourceType: "IntuneDeviceConfigurationPolicy",
         displayName: p.displayName || "Config Policy",
         properties: { DisplayName: p.displayName, Description: p.description, CreatedDateTime: p.createdDateTime, LastModifiedDateTime: p.lastModifiedDateTime, Version: p.version, Type: p["@odata.type"] },
-        status: "COMPLIANT",
+        status: "COMPLIANT", differingProperties: [],
       });
     }
   }
@@ -280,7 +290,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         workload: "INTUNE", resourceType: "IntuneAppProtectionPolicy",
         displayName: p.displayName || "App Protection Policy",
         properties: { DisplayName: p.displayName, Description: p.description, CreatedDateTime: p.createdDateTime, LastModifiedDateTime: p.lastModifiedDateTime, Version: p.version, Type: p["@odata.type"] },
-        status: "COMPLIANT",
+        status: "COMPLIANT", differingProperties: [],
       });
     }
   }
@@ -291,11 +301,13 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
     const scores = (secureScore.data as any).value || [];
     if (scores.length > 0) {
       const s = scores[0];
+      const isDrifted = s.currentScore < s.maxScore * 0.7;
       resources.push({
         workload: "DEFENDER", resourceType: "SecureScore",
         displayName: "Microsoft Secure Score",
         properties: { CurrentScore: s.currentScore, MaxScore: s.maxScore, AverageComparativeScore: s.averageComparativeScores, CreatedDateTime: s.createdDateTime, EnabledServices: s.enabledServices },
-        status: s.currentScore >= s.maxScore * 0.7 ? "COMPLIANT" : "DRIFTED",
+        status: isDrifted ? "DRIFTED" : "COMPLIANT",
+        differingProperties: isDrifted ? ["CurrentScore"] : [],
       });
     }
   }
@@ -304,11 +316,13 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   const scoreProfiles = await tryGraphGet(token, "/security/secureScoreControlProfiles?$top=50");
   if (scoreProfiles.data) {
     for (const p of ((scoreProfiles.data as any).value || []).slice(0, 30)) {
+      const isDrifted = (p.currentScore ?? 0) < (p.maxScore ?? 1);
       resources.push({
         workload: "DEFENDER", resourceType: "SecureScoreControlProfile",
         displayName: p.title || p.id || "Control",
         properties: { Title: p.title, MaxScore: p.maxScore, CurrentScore: p.currentScore, ControlCategory: p.controlCategory, Service: p.service, Tier: p.tier, UserImpact: p.userImpact, ImplementationCost: p.implementationCost, Threats: p.threats },
-        status: (p.currentScore ?? 0) >= (p.maxScore ?? 1) ? "COMPLIANT" : "DRIFTED",
+        status: isDrifted ? "DRIFTED" : "COMPLIANT",
+        differingProperties: isDrifted ? ["CurrentScore"] : [],
       });
     }
   }
@@ -321,7 +335,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
       workload: "EXO", resourceType: "EXOMailboxSettings",
       displayName: "Current User Mailbox Settings",
       properties: { TimeZone: ms.timeZone, DateFormat: ms.dateFormat, TimeFormat: ms.timeFormat, Language: ms.language, AutomaticRepliesSetting: ms.automaticRepliesSetting?.status, DelegateMeetingMessageDeliveryOptions: ms.delegateMeetingMessageDeliveryOptions },
-      status: "COMPLIANT",
+      status: "COMPLIANT", differingProperties: [],
     });
   }
 
@@ -329,11 +343,13 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   const myDrive = await tryGraphGet(token, "/me/drive");
   if (myDrive.data) {
     const d = myDrive.data as any;
+    const isDrifted = d.quota?.state !== "normal";
     resources.push({
       workload: "OD", resourceType: "ODSettings",
       displayName: "OneDrive — Current User",
       properties: { DriveType: d.driveType, QuotaTotal: d.quota?.total, QuotaUsed: d.quota?.used, QuotaRemaining: d.quota?.remaining, QuotaState: d.quota?.state, WebUrl: d.webUrl },
-      status: d.quota?.state === "normal" ? "COMPLIANT" : "DRIFTED",
+      status: isDrifted ? "DRIFTED" : "COMPLIANT",
+      differingProperties: isDrifted ? ["QuotaState"] : [],
     });
   }
 
@@ -345,7 +361,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         workload: "SPO", resourceType: "SPOSite",
         displayName: s.displayName || s.name || s.webUrl || "Site",
         properties: { DisplayName: s.displayName, WebUrl: s.webUrl, IsPersonalSite: s.isPersonalSite, CreatedDateTime: s.createdDateTime, LastModifiedDateTime: s.lastModifiedDateTime, SiteId: s.id },
-        status: "COMPLIANT",
+        status: "COMPLIANT", differingProperties: [],
       });
     }
   }
@@ -359,6 +375,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         displayName: t.displayName || "Team",
         properties: { DisplayName: t.displayName, Description: t.description, Visibility: t.visibility, IsArchived: t.isArchived, WebUrl: t.webUrl, TenantId: t.tenantId },
         status: t.isArchived ? "DRIFTED" : "COMPLIANT",
+        differingProperties: t.isArchived ? ["IsArchived"] : [],
       });
     }
   }
@@ -373,14 +390,8 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         resources.push({
           workload: "TEAMS", resourceType: "TeamsTeamSettings",
           displayName: `${td.displayName || t.displayName} — Settings`,
-          properties: {
-            DisplayName: td.displayName,
-            MemberSettings: { AllowCreateUpdateChannels: td.memberSettings?.allowCreateUpdateChannels, AllowDeleteChannels: td.memberSettings?.allowDeleteChannels, AllowAddRemoveApps: td.memberSettings?.allowAddRemoveApps, AllowCreateUpdateRemoveTabs: td.memberSettings?.allowCreateUpdateRemoveTabs, AllowCreateUpdateRemoveConnectors: td.memberSettings?.allowCreateUpdateRemoveConnectors },
-            GuestSettings: { AllowCreateUpdateChannels: td.guestSettings?.allowCreateUpdateChannels, AllowDeleteChannels: td.guestSettings?.allowDeleteChannels },
-            MessagingSettings: { AllowUserEditMessages: td.messagingSettings?.allowUserEditMessages, AllowUserDeleteMessages: td.messagingSettings?.allowUserDeleteMessages, AllowOwnerDeleteMessages: td.messagingSettings?.allowOwnerDeleteMessages, AllowTeamMentions: td.messagingSettings?.allowTeamMentions, AllowChannelMentions: td.messagingSettings?.allowChannelMentions },
-            FunSettings: { AllowGiphy: td.funSettings?.allowGiphy, GiphyContentRating: td.funSettings?.giphyContentRating, AllowStickersAndMemes: td.funSettings?.allowStickersAndMemes, AllowCustomMemes: td.funSettings?.allowCustomMemes },
-          },
-          status: "COMPLIANT",
+          properties: { DisplayName: td.displayName, MemberSettings: td.memberSettings, GuestSettings: td.guestSettings, MessagingSettings: td.messagingSettings, FunSettings: td.funSettings },
+          status: "COMPLIANT", differingProperties: [],
         });
       }
     }
@@ -397,7 +408,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
             workload: "TEAMS", resourceType: "TeamsChannel",
             displayName: `${t.displayName} / ${ch.displayName}`,
             properties: { TeamName: t.displayName, ChannelName: ch.displayName, MembershipType: ch.membershipType, WebUrl: ch.webUrl, Description: ch.description },
-            status: "COMPLIANT",
+            status: "COMPLIANT", differingProperties: [],
           });
         }
       }
@@ -408,25 +419,28 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
   const ppEnvironments = await tryGraphGet(token, "/admin/powerPlatform/environments", true);
   if (ppEnvironments.data) {
     for (const env of ((ppEnvironments.data as any).value || [])) {
+      const isDrifted = env.state !== "Ready";
       resources.push({
         workload: "PP", resourceType: "PPEnvironment",
         displayName: env.displayName || env.name || "Environment",
         properties: { DisplayName: env.displayName, Name: env.name, Type: env.environmentType, State: env.state, Region: env.region, CreatedTime: env.createdTime, IsDefault: env.isDefault },
-        status: env.state === "Ready" ? "COMPLIANT" : "DRIFTED",
+        status: isDrifted ? "DRIFTED" : "COMPLIANT",
+        differingProperties: isDrifted ? ["EnvironmentState"] : [],
       });
     }
   }
 
   // ─── Fabric / Power BI: Capacities (beta) ─────────────
-  // Note: Fabric APIs are limited — this pulls what's available
   const fabricCapacities = await tryGraphGet(token, "/admin/fabric/capacities", true);
   if (fabricCapacities.data) {
     for (const cap of ((fabricCapacities.data as any).value || [])) {
+      const isDrifted = cap.state !== "Active";
       resources.push({
         workload: "FABRIC", resourceType: "FabricCapacity",
         displayName: cap.displayName || cap.name || "Capacity",
         properties: { DisplayName: cap.displayName, Sku: cap.sku, State: cap.state, Region: cap.region, Admins: cap.admins },
-        status: cap.state === "Active" ? "COMPLIANT" : "DRIFTED",
+        status: isDrifted ? "DRIFTED" : "COMPLIANT",
+        differingProperties: isDrifted ? ["CapacityState"] : [],
       });
     }
   }
@@ -459,7 +473,7 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
         tenantId, snapshotId: snapshot.id, workload: res.workload as any,
         resourceType: res.resourceType, displayName: res.displayName, primaryKey: res.displayName,
         properties: res.properties as object, desiredState: res.properties as object, actualState: res.properties as object,
-        status: res.status, differingProperties: res.status === "DRIFTED" ? ["state"] : [], lastChecked: new Date(),
+        status: res.status, differingProperties: res.differingProperties, lastChecked: new Date(),
       },
     });
   }

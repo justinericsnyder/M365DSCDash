@@ -201,6 +201,57 @@ const explanations: Record<string, DriftExplanation> = {
     docUrl: "https://learn.microsoft.com/en-us/entra/fundamentals/security-defaults",
   },
 
+  // ─── Auth Methods ──────────────────────────────────────
+  "AuthMethodState": {
+    setting: "Authentication Method State",
+    description: "Controls whether a specific authentication method (e.g., Microsoft Authenticator, FIDO2 keys, SMS) is enabled for users in your tenant.",
+    risk: "Disabled authentication methods reduce MFA options, potentially forcing users to less secure methods or preventing sign-in.",
+    recommendation: "Enable Microsoft Authenticator and FIDO2 security keys. Disable SMS and voice call methods where possible as they are vulnerable to SIM-swapping.",
+    docUrl: "https://learn.microsoft.com/en-us/entra/identity/authentication/concept-authentication-methods",
+  },
+  "IsVerified": {
+    setting: "Domain Verification Status",
+    description: "Indicates whether a custom domain has been verified by proving ownership through DNS records.",
+    risk: "Unverified domains cannot be used for user accounts or email routing and may indicate incomplete setup.",
+    recommendation: "Complete domain verification by adding the required TXT or MX record to your DNS.",
+    docUrl: "https://learn.microsoft.com/en-us/entra/fundamentals/add-custom-domain",
+  },
+  "IsArchived": {
+    setting: "Team Archived Status",
+    description: "An archived team is read-only — members can view content but cannot post messages, add files, or modify channels.",
+    risk: "If a team is unexpectedly archived, active collaboration is disrupted for all members.",
+    recommendation: "Review archived teams periodically. Unarchive if still needed for active work.",
+    docUrl: "https://learn.microsoft.com/en-us/microsoftteams/archive-or-delete-a-team",
+  },
+  "QuotaState": {
+    setting: "OneDrive Storage Quota State",
+    description: "Indicates the current state of a user's OneDrive storage: normal, nearing, critical, or exceeded.",
+    risk: "Users with exceeded quotas cannot upload new files, which may cause data loss from Office apps that auto-save to OneDrive.",
+    recommendation: "Monitor quota states. Increase storage limits or help users clean up old files.",
+    docUrl: "https://learn.microsoft.com/en-us/sharepoint/manage-site-collection-storage-limits",
+  },
+  "CurrentScore": {
+    setting: "Microsoft Secure Score",
+    description: "A numerical summary of your organization's security posture based on configurations and behaviors across Microsoft 365 services.",
+    risk: "A score below 70% of maximum indicates significant unaddressed security recommendations — each is a potential attack vector.",
+    recommendation: "Review improvement actions in Microsoft 365 Defender portal. Prioritize high-impact, low-effort actions first.",
+    docUrl: "https://learn.microsoft.com/en-us/defender-xdr/microsoft-secure-score",
+  },
+  "EnvironmentState": {
+    setting: "Power Platform Environment State",
+    description: "The operational state of a Power Platform environment. Healthy environments show 'Ready'.",
+    risk: "A non-ready environment means Power Apps, Power Automate flows, and Dataverse databases are unavailable.",
+    recommendation: "Check the Power Platform admin center for environment health details.",
+    docUrl: "https://learn.microsoft.com/en-us/power-platform/admin/environments-overview",
+  },
+  "CapacityState": {
+    setting: "Fabric Capacity State",
+    description: "The operational state of a Microsoft Fabric capacity. Active capacities are running and available.",
+    risk: "A non-active capacity means all Fabric workspaces assigned to it are unavailable to users.",
+    recommendation: "Resume paused capacities if needed. Review utilization to right-size your deployment.",
+    docUrl: "https://learn.microsoft.com/en-us/fabric/enterprise/pause-resume",
+  },
+
   // ─── DSC Infrastructure ───────────────────────────────
   // Source: https://learn.microsoft.com/en-us/powershell/dsc/concepts/resources/overview
   "_exist": {
