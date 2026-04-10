@@ -1,182 +1,355 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Settings,
-  Database,
-  RefreshCw,
-  Trash2,
-  ExternalLink,
-  Server,
-  Globe,
+  Settings, Database, RefreshCw, Trash2, ExternalLink, Server, Globe,
+  Cloud, ShieldCheck, Bot, Link2, Unlink, CheckCircle2, AlertTriangle,
+  ArrowRight, Lock, Key, Fingerprint,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { timeAgo } from "@/lib/utils";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+interface MsStatus {
+  connected: boolean;
+  authenticated: boolean;
+  hasTenant?: boolean;
+  tenant?: {
+    id: string;
+    displayName: string;
+    tenantName: string;
+    defaultDomain: string;
+    connectedUserEmail: string | null;
+    scopes: string[];
+    lastSyncAt: string | null;
+    error: string | null;
+  };
+}
+
+interface AuthUser {
+  id: string; name: string; email: string; role: string; isApproved: boolean;
+}
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" /></div>}>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
+  const searchParams = useSearchParams();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [msStatus, setMsStatus] = useState<MsStatus | null>(null);
   const [seeding, setSeeding] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    const [authRes, msRes] = await Promise.all([
+      fetch("/api/auth/me").then((r) => r.json()).catch(() => ({ authenticated: false })),
+      fetch("/api/microsoft/status").then((r) => r.json()).catch(() => ({ connected: false })),
+    ]);
+    if (authRes.authenticated) setUser(authRes.user);
+    setMsStatus(msRes);
+  }, []);
+
+  useEffect(() => {
+    fetchStatus();
+    // Handle OAuth callback messages
+    const connected = searchParams.get("connected");
+    const error = searchParams.get("error");
+    if (connected === "true") {
+      toast.success("Microsoft 365 connected successfully!");
+      // Clean URL
+      window.history.replaceState({}, "", "/settings");
+    }
+    if (error) {
+      toast.error(decodeURIComponent(error));
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, [fetchStatus, searchParams]);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await fetch("/api/microsoft/connect");
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.error || "Failed to start connection");
+        setConnecting(false);
+      }
+    } catch {
+      toast.error("Failed to start connection");
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!confirm("Disconnect Microsoft 365? This will remove the stored authorization. You can reconnect at any time.")) return;
+    setDisconnecting(true);
+    try {
+      const res = await fetch("/api/microsoft/disconnect", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Microsoft 365 disconnected");
+        fetchStatus();
+      } else toast.error(data.error);
+    } catch { toast.error("Failed to disconnect"); }
+    finally { setDisconnecting(false); }
+  };
 
   const handleSeed = async () => {
     setSeeding(true);
     try {
-      // Seed infrastructure data
-      const res = await fetch("/api/seed", { method: "POST" });
-      const data = await res.json();
-      // Also seed M365 data
-      const m365Res = await fetch("/api/m365/seed", { method: "POST" });
-      const m365Data = await m365Res.json();
-      // Also seed Agent 365 data
-      const agentRes = await fetch("/api/agents/seed", { method: "POST" });
-      const agentData = await agentRes.json();
-      if (data.success && m365Data.success && agentData.success) {
-        toast.success(`Seeded: ${data.summary.nodes} nodes, ${m365Data.summary.resources} M365 resources, ${agentData.summary.total} agents`);
-      } else {
-        toast.error(data.error || m365Data.error || agentData.error || "Seed failed");
-      }
-    } catch {
-      toast.error("Failed to seed data. Check database connection.");
-    } finally {
-      setSeeding(false);
-    }
+      const results = await Promise.all([
+        fetch("/api/seed", { method: "POST" }).then((r) => r.json()),
+        fetch("/api/m365/seed", { method: "POST" }).then((r) => r.json()),
+        fetch("/api/agents/seed", { method: "POST" }).then((r) => r.json()),
+        fetch("/api/purview/seed", { method: "POST" }).then((r) => r.json()),
+      ]);
+      const allOk = results.every((r) => r.success);
+      if (allOk) toast.success("All demo data loaded");
+      else toast.error("Some seeds failed");
+    } catch { toast.error("Seed failed"); }
+    finally { setSeeding(false); }
   };
+
+  const isAuthenticated = !!user;
+  const isConnected = msStatus?.connected;
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
         <h2 className="text-2xl font-bold text-dsc-text">Settings</h2>
-        <p className="text-sm text-dsc-text-secondary mt-1">
-          Application configuration and data management
-        </p>
+        <p className="text-sm text-dsc-text-secondary mt-1">Connect your Microsoft 365 tenant and manage data</p>
       </div>
 
-      {/* Infrastructure */}
-      <Card>
+      {/* ─── Microsoft 365 Connection ──────────────────── */}
+      <Card className={isConnected ? "border-dsc-green/30" : isAuthenticated ? "border-dsc-blue/30" : ""}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <Globe className="h-4 w-4 text-dsc-blue" />
-            Infrastructure
+            <Cloud className="h-4 w-4 text-dsc-blue" />
+            Microsoft 365 Connection
           </CardTitle>
+          <CardDescription>
+            {isConnected
+              ? "Your tenant is connected. Data is pulled via Microsoft Graph API."
+              : "Connect your Microsoft 365 tenant to pull real data for Purview labels, Agent Registry, and M365 DSC."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!isAuthenticated ? (
+            /* Not logged in */
+            <div className="p-4 rounded-lg bg-dsc-bg border border-dsc-border text-center">
+              <Lock className="h-8 w-8 text-dsc-text-secondary mx-auto mb-3" />
+              <p className="text-sm font-medium text-dsc-text mb-1">Sign in to connect your tenant</p>
+              <p className="text-xs text-dsc-text-secondary mb-4">You need an account to set up Microsoft 365 integration.</p>
+              <a href="/login"><Button size="sm">Sign In</Button></a>
+            </div>
+          ) : isConnected && msStatus?.tenant ? (
+            /* Connected */
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 rounded-lg bg-dsc-green-50 border border-dsc-green/20">
+                <CheckCircle2 className="h-5 w-5 text-dsc-green flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-dsc-text">Connected to {msStatus.tenant.displayName}</p>
+                  <p className="text-xs text-dsc-text-secondary">{msStatus.tenant.tenantName} · {msStatus.tenant.defaultDomain}</p>
+                </div>
+                <Badge variant="compliant">Active</Badge>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <p className="text-xs text-dsc-text-secondary">Authorized By</p>
+                  <p className="font-medium">{msStatus.tenant.connectedUserEmail || "—"}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <p className="text-xs text-dsc-text-secondary">Last Sync</p>
+                  <p className="font-medium">{timeAgo(msStatus.tenant.lastSyncAt)}</p>
+                </div>
+              </div>
+
+              {msStatus.tenant.scopes.length > 0 && (
+                <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <p className="text-xs text-dsc-text-secondary mb-2">Granted Permissions</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {msStatus.tenant.scopes.map((s) => (
+                      <span key={s} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-2 py-0.5 rounded-full">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {msStatus.tenant.error && (
+                <div className="flex items-center gap-2 p-3 rounded-lg bg-dsc-red-50 border border-dsc-red/20 text-sm text-dsc-red">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />{msStatus.tenant.error}
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleConnect} disabled={connecting}>
+                  <RefreshCw className={`h-3.5 w-3.5 ${connecting ? "animate-spin" : ""}`} />Reconnect
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleDisconnect} disabled={disconnecting} className="text-dsc-red hover:text-dsc-red">
+                  <Unlink className="h-3.5 w-3.5" />Disconnect
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Authenticated but not connected — onboarding */
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg bg-dsc-blue-50/50 border border-dsc-blue/20">
+                <h4 className="text-sm font-semibold text-dsc-text mb-3 flex items-center gap-2">
+                  <Key className="h-4 w-4 text-dsc-blue" />How it works
+                </h4>
+                <div className="space-y-3 text-sm text-dsc-text-secondary">
+                  <div className="flex items-start gap-3">
+                    <span className="flex-shrink-0 h-6 w-6 rounded-full bg-dsc-blue text-white text-xs flex items-center justify-center font-bold">1</span>
+                    <div>
+                      <p className="font-medium text-dsc-text">Click &ldquo;Connect Microsoft 365&rdquo;</p>
+                      <p className="text-xs">You&apos;ll be redirected to Microsoft&apos;s sign-in page.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="flex-shrink-0 h-6 w-6 rounded-full bg-dsc-blue text-white text-xs flex items-center justify-center font-bold">2</span>
+                    <div>
+                      <p className="font-medium text-dsc-text">Sign in and consent</p>
+                      <p className="text-xs">Use your Microsoft 365 admin account. Review and accept the requested permissions.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="flex-shrink-0 h-6 w-6 rounded-full bg-dsc-blue text-white text-xs flex items-center justify-center font-bold">3</span>
+                    <div>
+                      <p className="font-medium text-dsc-text">Data flows automatically</p>
+                      <p className="text-xs">Purview labels, Agent Registry, and tenant config data will be pulled via Microsoft Graph API.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                <p className="text-xs text-dsc-text-secondary flex items-center gap-1.5">
+                  <Fingerprint className="h-3.5 w-3.5" />
+                  <strong>Security:</strong> We use OAuth2 with PKCE. No passwords or client secrets from your tenant are stored. You can revoke access anytime from your Azure AD portal.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                <p className="text-xs text-dsc-text-secondary mb-2">Permissions requested:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {["User.Read", "Organization.Read.All", "SensitivityLabel.Read", "InformationProtectionPolicy.Read"].map((p) => (
+                    <span key={p} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Lock className="h-2.5 w-2.5" />{p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <Button onClick={handleConnect} disabled={connecting} size="lg" className="w-full">
+                <Cloud className="h-4 w-4" />
+                {connecting ? "Redirecting to Microsoft..." : "Connect Microsoft 365"}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ─── What Gets Synced ──────────────────────────── */}
+      {isAuthenticated && !isConnected && (
+        <div className="grid grid-cols-3 gap-4">
+          <Card className="text-center p-4">
+            <ShieldCheck className="h-8 w-8 text-dsc-yellow mx-auto mb-2" />
+            <p className="text-sm font-semibold">Purview Labels</p>
+            <p className="text-[10px] text-dsc-text-secondary mt-1">Sensitivity labels, protection scopes, drift monitoring</p>
+          </Card>
+          <Card className="text-center p-4">
+            <Bot className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+            <p className="text-sm font-semibold">Agent Registry</p>
+            <p className="text-[10px] text-dsc-text-secondary mt-1">Copilot agents, deployment status, governance</p>
+          </Card>
+          <Card className="text-center p-4">
+            <Cloud className="h-8 w-8 text-dsc-blue mx-auto mb-2" />
+            <p className="text-sm font-semibold">M365 DSC</p>
+            <p className="text-[10px] text-dsc-text-secondary mt-1">Tenant configuration compliance across workloads</p>
+          </Card>
+        </div>
+      )}
+
+      {/* ─── Infrastructure ────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><Globe className="h-4 w-4 text-dsc-blue" />Infrastructure</CardTitle>
           <CardDescription>Hosting and service configuration</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border">
-              <div className="flex items-center gap-3">
-                <div className="rounded-md bg-black p-1.5">
-                  <svg className="h-4 w-4 text-white" viewBox="0 0 76 65" fill="currentColor">
-                    <path d="M37.5274 0L75.0548 65H0L37.5274 0Z" />
-                  </svg>
+          <div className="space-y-3">
+            {[
+              { name: "Vercel", desc: "Next.js Application Hosting", color: "bg-black", icon: "▲" },
+              { name: "Railway", desc: "Redis Cache + PostgreSQL", color: "bg-purple-600", icon: null },
+            ].map((svc) => (
+              <div key={svc.name} className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border">
+                <div className="flex items-center gap-3">
+                  <div className={`rounded-md ${svc.color} p-1.5`}>
+                    {svc.icon ? <span className="text-white text-xs font-bold">{svc.icon}</span> : <Server className="h-4 w-4 text-white" />}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">{svc.name}</p>
+                    <p className="text-xs text-dsc-text-secondary">{svc.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-dsc-text">Vercel</p>
-                  <p className="text-xs text-dsc-text-secondary">Next.js Application Hosting</p>
-                </div>
+                <Badge variant="compliant">Connected</Badge>
               </div>
-              <Badge variant="compliant">Connected</Badge>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border">
-              <div className="flex items-center gap-3">
-                <div className="rounded-md bg-purple-600 p-1.5">
-                  <Server className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-dsc-text">Railway</p>
-                  <p className="text-xs text-dsc-text-secondary">Redis Cache Service</p>
-                </div>
-              </div>
-              <Badge variant="compliant">Connected</Badge>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border">
-              <div className="flex items-center gap-3">
-                <div className="rounded-md bg-dsc-green p-1.5">
-                  <Database className="h-4 w-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-dsc-text">PostgreSQL</p>
-                  <p className="text-xs text-dsc-text-secondary">Primary Database</p>
-                </div>
-              </div>
-              <Badge variant="compliant">Connected</Badge>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Data Management */}
+      {/* ─── Demo Data ─────────────────────────────────── */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Database className="h-4 w-4 text-dsc-green" />
-            Data Management
-          </CardTitle>
-          <CardDescription>Seed demo data or reset the database</CardDescription>
+          <CardTitle className="flex items-center gap-2 text-base"><Database className="h-4 w-4 text-dsc-green" />Demo Data</CardTitle>
+          <CardDescription>Load sample data for testing and demonstration</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-lg bg-dsc-blue-50 border border-dsc-blue/20">
-              <div>
-                <p className="text-sm font-medium text-dsc-text">Load Demo Data</p>
-                <p className="text-xs text-dsc-text-secondary mt-0.5">
-                  Populate the dashboard with 20 realistic nodes, 10 configurations, and drift events
-                </p>
-              </div>
-              <Button onClick={handleSeed} disabled={seeding}>
-                <RefreshCw className={`h-4 w-4 ${seeding ? "animate-spin" : ""}`} />
-                {seeding ? "Seeding..." : "Seed Data"}
-              </Button>
+          <div className="flex items-center justify-between p-4 rounded-lg bg-dsc-blue-50 border border-dsc-blue/20">
+            <div>
+              <p className="text-sm font-medium">Load All Demo Data</p>
+              <p className="text-xs text-dsc-text-secondary mt-0.5">Nodes, configs, M365 resources, agents, Purview labels, and drift events</p>
             </div>
-
-            <div className="flex items-center justify-between p-4 rounded-lg bg-dsc-red-50 border border-dsc-red/20">
-              <div>
-                <p className="text-sm font-medium text-dsc-text">Reset Database</p>
-                <p className="text-xs text-dsc-text-secondary mt-0.5">
-                  Clear all data and start fresh. This action cannot be undone.
-                </p>
-              </div>
-              <Button variant="danger" onClick={handleSeed}>
-                <Trash2 className="h-4 w-4" /> Reset & Reseed
-              </Button>
-            </div>
+            <Button onClick={handleSeed} disabled={seeding}>
+              <RefreshCw className={`h-4 w-4 ${seeding ? "animate-spin" : ""}`} />{seeding ? "Loading..." : "Seed Data"}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* About DSC */}
+      {/* ─── About ─────────────────────────────────────── */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Settings className="h-4 w-4 text-dsc-text-secondary" />
-            About DSC v3
-          </CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Settings className="h-4 w-4 text-dsc-text-secondary" />About</CardTitle></CardHeader>
         <CardContent>
           <p className="text-sm text-dsc-text-secondary mb-4">
-            Microsoft Desired State Configuration (DSC) v3 is a declarative configuration platform
-            that runs on Linux, macOS, and Windows. It defines a standard way of exposing settings
-            for applications and services using configuration documents in YAML or JSON.
+            DSC Dashboard integrates PowerShell DSC v3, Microsoft365DSC, Microsoft Purview, and Agent 365 Registry into a unified compliance management interface.
           </p>
           <div className="flex gap-3">
-            <a
-              href="https://learn.microsoft.com/en-us/powershell/dsc/overview?view=dsc-3.0"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button variant="outline" size="sm">
-                <ExternalLink className="h-3.5 w-3.5" /> Documentation
-              </Button>
+            <a href="https://learn.microsoft.com/en-us/powershell/dsc/overview?view=dsc-3.0" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm"><ExternalLink className="h-3.5 w-3.5" />DSC Docs</Button>
             </a>
-            <a
-              href="https://github.com/PowerShell/DSC"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button variant="outline" size="sm">
-                <ExternalLink className="h-3.5 w-3.5" /> GitHub Repository
-              </Button>
+            <a href="https://learn.microsoft.com/en-us/graph/api/tenantdatasecurityandgovernance-list-sensitivitylabels" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm"><ExternalLink className="h-3.5 w-3.5" />Purview API</Button>
+            </a>
+            <a href="https://github.com/PowerShell/DSC" target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm"><ExternalLink className="h-3.5 w-3.5" />GitHub</Button>
             </a>
           </div>
         </CardContent>

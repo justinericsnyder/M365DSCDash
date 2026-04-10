@@ -56,6 +56,16 @@ model M365Tenant {
   tenantName      String
   displayName     String
   defaultDomain   String
+  // OAuth2 connection (no client secrets stored)
+  azureTenantId         String?   // The user's Azure AD tenant ID
+  encryptedRefreshToken String?   // AES-256-GCM encrypted refresh token
+  refreshTokenIv        String?   // Initialization vector
+  refreshTokenTag       String?   // Auth tag
+  tokenScopes           String[]  // Granted permission scopes
+  connectedUserEmail    String?   // Who authorized the connection
+  isConnected           Boolean @default(false)
+  connectionError       String?
+  lastSyncAt            DateTime?
   lastExport      DateTime?
   lastDriftCheck  DateTime?
   userId          String
