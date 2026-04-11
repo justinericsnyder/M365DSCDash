@@ -5,8 +5,8 @@ import { Toaster } from "react-hot-toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DSC Dashboard — Desired State Configuration Manager",
-  description: "Visualize and manage PowerShell DSC v3 configurations, nodes, and drift events.",
+  title: "AI DSC Dashboard — Desired State Configuration Manager",
+  description: "Visualize and manage PowerShell DSC v3 configurations, M365 tenant compliance, Copilot agents, and Purview sensitivity labels.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

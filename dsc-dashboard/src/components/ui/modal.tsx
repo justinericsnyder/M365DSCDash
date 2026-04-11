@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
@@ -29,10 +30,12 @@ export function Modal({ open, onClose, title, children, className, wide }: Modal
 
   if (!open) return null;
 
-  return (
+  // Use portal to render at document body — escapes any parent overflow/z-index context
+  return createPortal(
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      style={{ zIndex: 9999 }}
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div className={cn(
@@ -40,21 +43,19 @@ export function Modal({ open, onClose, title, children, className, wide }: Modal
         wide ? "w-full max-w-3xl" : "w-full max-w-lg",
         className
       )}>
-        {/* Header */}
         {title && (
           <div className="flex items-center justify-between px-5 py-4 border-b border-dsc-border flex-shrink-0">
             <h3 className="text-base font-semibold text-dsc-text">{title}</h3>
-            <button onClick={onClose} className="p-1 rounded-md hover:bg-dsc-border/30 transition-colors">
+            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-dsc-border/30 transition-colors">
               <X className="h-4 w-4 text-dsc-text-secondary" />
             </button>
           </div>
         )}
-        {/* Body */}
         <div className="overflow-y-auto flex-1 px-5 py-4">
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
-

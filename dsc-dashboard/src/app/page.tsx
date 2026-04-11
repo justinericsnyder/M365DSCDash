@@ -95,7 +95,7 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center">
         <div className="rounded-full bg-dsc-blue-50 p-6 mb-6"><Database className="h-12 w-12 text-dsc-blue" /></div>
-        <h2 className="text-2xl font-bold text-dsc-text mb-2">Welcome to DSC Dashboard</h2>
+        <h2 className="text-2xl font-bold text-dsc-text mb-2">Welcome to AI DSC Dashboard</h2>
         <p className="text-dsc-text-secondary max-w-md mb-8">Manage DSC configurations, M365 tenant compliance, Copilot agents, and Purview sensitivity labels from one place.</p>
         <Button onClick={handleSeedAll} size="lg"><Database className="h-4 w-4" />Load All Demo Data</Button>
       </div>

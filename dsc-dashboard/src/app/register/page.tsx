@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -56,7 +56,7 @@ export default function RegisterPage() {
             <Blocks className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-dsc-text">DSC Dashboard</h1>
+            <h1 className="text-xl font-bold text-dsc-text">AI DSC Dashboard</h1>
             <p className="text-xs text-dsc-text-secondary">Configuration Management</p>
           </div>
         </div>
@@ -118,4 +118,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
 

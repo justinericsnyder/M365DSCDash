@@ -68,7 +68,7 @@ export function Sidebar() {
             <Blocks className="h-4 w-4 text-white" />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-dsc-text tracking-tight">DSC Dashboard</h1>
+            <h1 className="text-sm font-bold text-dsc-text tracking-tight">AI DSC Dashboard</h1>
             <p className="text-[10px] text-dsc-text-secondary">v3.5 Configuration Manager</p>
           </div>
         </div>
