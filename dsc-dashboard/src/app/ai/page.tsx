@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,8 +97,7 @@ function OverviewTab({ data, t, expandedId, setExpandedId }: any) {
   if (!data?.hasData) return <EmptyState icon={Sparkles} title="No AI data synced" description="Connect your tenant and click Sync Now in Settings." />;
 
   return (
-    <div className="space-y-6">
-      {/* Hero metrics */}
+    <div className="space-y-6 stagger-children">`n      {/* Hero metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon={Bot} label="Copilot Agents" value={t.agents} sub={`${t.deployedAgents} deployed`} color="purple" trend={generateTrend(agentDeployPct)} />
         <MetricCard icon={Plug} label="Graph Connectors" value={t.connectors} sub={`${t.readyConnectors} ready`} color="blue" trend={generateTrend(connHealthPct)} />
@@ -238,8 +237,8 @@ function Copilot365Tab({ data, t, expandedId, setExpandedId }: any) {
   const consents = data?.resources?.CopilotOAuthConsent || [];
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="space-y-6 stagger-children">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
         <MetricCard icon={Settings} label="Admin Settings" value={copilotSettings.length} sub="Copilot config" color="purple" trend={generateTrend(80)} />
         <MetricCard icon={Plug} label="Graph Connectors" value={connectors.length} sub={`${connectors.filter((c: any) => c.status === "COMPLIANT").length} ready`} color="blue" trend={generateTrend(connectors.length > 0 ? 90 : 0)} />
         <MetricCard icon={MessageSquare} label="Teams AI Apps" value={teamsApps.length} sub="Copilot-related" color="green" trend={generateTrend(70)} />
@@ -278,8 +277,8 @@ function Copilot365Tab({ data, t, expandedId, setExpandedId }: any) {
 /* ─── Copilot Studio Tab ───────────────────────────────── */
 function CopilotStudioTab({ t }: any) {
   return (
-    <div className="space-y-6">
-      <div className="p-4 rounded-lg bg-dsc-green-50/50 border border-dsc-green/20">
+    <div className="space-y-6 stagger-children">
+      <div className="p-4 rounded-lg bg-dsc-green-50/50 border border-dsc-green/20 animate-gravity-in">
         <div className="flex items-center gap-2 mb-2"><Bot className="h-4 w-4 text-dsc-green" /><span className="text-sm font-semibold">Microsoft Copilot Studio</span></div>
         <p className="text-xs text-dsc-text-secondary">Build declarative agents for M365 Copilot, custom engine agents, and classic chatbots. Extend with plugins, connectors, and knowledge sources.</p>
       </div>
@@ -904,4 +903,5 @@ function ConnectorDetailModal({ connector }: { connector: any }) {
     </div>
   );
 }
+
 

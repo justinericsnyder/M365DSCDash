@@ -78,7 +78,16 @@ export default function DashboardPage() {
     } catch { toast.error("Seed failed"); }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" /></div>;
+  if (loading) return (
+    <div className="space-y-6 animate-pulse">
+      <div className="h-8 w-48 bg-dsc-border/30 rounded-lg" />
+      <div className="h-4 w-72 bg-dsc-border/20 rounded" />
+      <div className="rounded-xl border border-dsc-border bg-dsc-surface p-6 h-32" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1,2,3,4].map((i) => <div key={i} className="rounded-xl border border-dsc-border bg-dsc-surface p-6 h-28" />)}
+      </div>
+    </div>
+  );
 
   const hasAnyData = stats?.infra?.nodes?.total > 0 || stats?.m365?.hasTenant || stats?.agents?.hasAgents || stats?.purview?.hasData;
 
@@ -139,14 +148,14 @@ export default function DashboardPage() {
   const purviewTrend = generateTrend(purviewPct);
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="space-y-6 stagger-children">
+      <div className="animate-gravity-in">
         <h2 className="text-2xl font-bold text-dsc-text">Dashboard</h2>
-        <p className="text-sm text-dsc-text-secondary mt-1">Unified view across infrastructure, M365, agents, and Purview</p>
+        <p className="text-sm text-dsc-text-secondary mt-1.5 leading-relaxed">Unified view across infrastructure, M365, agents, and Purview</p>
       </div>
 
       {/* ─── Overall Health Summary ──────────────────────── */}
-      <Card className="border-dsc-border/60 bg-gradient-to-r from-dsc-surface to-dsc-bg">
+      <Card className="border-dsc-border/60 bg-gradient-to-r from-dsc-surface to-dsc-bg animate-gravity-in">
         <div className="flex items-center gap-8">
           {/* Overall Score */}
           <div className="flex items-center gap-4 pr-8 border-r border-dsc-border">
@@ -187,7 +196,7 @@ export default function DashboardPage() {
       </Card>
 
       {/* ─── Detail Cards ────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
         {/* Infrastructure Compliance */}
         {infra?.nodes?.total > 0 && (
           <Card>
