@@ -25,6 +25,7 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowLeft,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -231,21 +232,27 @@ function M365ResourcesContent() {
                         </div>
 
                         {isExpanded && (
-                          <div className="mt-2 ml-7 grid grid-cols-1 md:grid-cols-2 gap-3">
-                            <div>
-                              <p className="text-xs font-medium text-dsc-text-secondary mb-1">
-                                {res.status === "COMPLIANT" ? "Current State" : "Desired State"}
-                              </p>
-                              <pre className="code-editor bg-dsc-green-50 rounded-lg p-3 text-xs overflow-auto max-h-48 border border-dsc-green/20">
-                                {JSON.stringify(res.status === "COMPLIANT" ? res.properties : res.desiredState, null, 2)}
-                              </pre>
-                            </div>
-                            {res.status !== "COMPLIANT" && (
-                              <div>
-                                <p className="text-xs font-medium text-dsc-text-secondary mb-1">Actual State</p>
-                                <pre className="code-editor bg-dsc-red-50 rounded-lg p-3 text-xs overflow-auto max-h-48 border border-dsc-red/20">
-                                  {JSON.stringify(res.actualState, null, 2)}
-                                </pre>
+                          <div className="mt-2 ml-7">
+                            {res.resourceType === "ODSettings" ? (
+                              <OneDriveMetrics properties={res.properties} />
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                  <p className="text-xs font-medium text-dsc-text-secondary mb-1">
+                                    {res.status === "COMPLIANT" ? "Current State" : "Desired State"}
+                                  </p>
+                                  <pre className="code-editor bg-dsc-green-50 rounded-lg p-3 text-xs overflow-auto max-h-48 border border-dsc-green/20">
+                                    {JSON.stringify(res.status === "COMPLIANT" ? res.properties : res.desiredState, null, 2)}
+                                  </pre>
+                                </div>
+                                {res.status !== "COMPLIANT" && (
+                                  <div>
+                                    <p className="text-xs font-medium text-dsc-text-secondary mb-1">Actual State</p>
+                                    <pre className="code-editor bg-dsc-red-50 rounded-lg p-3 text-xs overflow-auto max-h-48 border border-dsc-red/20">
+                                      {JSON.stringify(res.actualState, null, 2)}
+                                    </pre>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -259,6 +266,109 @@ function M365ResourcesContent() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── OneDrive Metrics Component ─────────────────────── */
+function OneDriveMetrics({ properties }: { properties: Record<string, unknown> }) {
+  const totalBytes = Number(properties.QuotaTotal) || 0;
+  const usedBytes = Number(properties.QuotaUsed) || 0;
+  const remainingBytes = Number(properties.QuotaRemaining) || 0;
+  const quotaState = String(properties.QuotaState || "unknown");
+  const driveType = String(properties.DriveType || "business");
+
+  const totalGB = totalBytes / (1024 * 1024 * 1024);
+  const usedGB = usedBytes / (1024 * 1024 * 1024);
+  const remainingGB = remainingBytes / (1024 * 1024 * 1024);
+  const usedPct = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
+
+  // Forecast days until full based on estimated daily usage
+  const avgDailyUsageGB = usedGB > 0 ? usedGB / 180 : 0.01;
+  const daysUntilFull = avgDailyUsageGB > 0 ? Math.round(remainingGB / avgDailyUsageGB) : 9999;
+  const forecastDate = new Date(Date.now() + daysUntilFull * 24 * 60 * 60 * 1000);
+
+  const dialColor = usedPct >= 90 ? "#E53E3E" : usedPct >= 70 ? "#D69E2E" : "#38A169";
+  const stateColor = quotaState === "normal" ? "text-dsc-green" : quotaState === "nearing" ? "text-dsc-yellow" : "text-dsc-red";
+  const stateBg = quotaState === "normal" ? "bg-dsc-green-50" : quotaState === "nearing" ? "bg-dsc-yellow-50" : "bg-dsc-red-50";
+
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDasharray = `${(usedPct / 100) * circumference} ${circumference}`;
+
+  return (
+    <div className="rounded-xl border border-dsc-border bg-white p-5">
+      <div className="flex flex-col sm:flex-row items-start gap-6">
+        {/* Radial Dial */}
+        <div className="flex-shrink-0 mx-auto sm:mx-0">
+          <div className="relative h-36 w-36">
+            <svg className="h-36 w-36 -rotate-90" viewBox="0 0 128 128">
+              <circle cx="64" cy="64" r={radius} fill="none" stroke="#E2E8F0" strokeWidth="10" />
+              <circle cx="64" cy="64" r={radius} fill="none" stroke={dialColor} strokeWidth="10" strokeDasharray={strokeDasharray} strokeLinecap="round" className="transition-all duration-700" />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-bold" style={{ color: dialColor }}>{usedPct.toFixed(1)}%</span>
+              <span className="text-[10px] text-dsc-text-secondary">used</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Metrics */}
+        <div className="flex-1 space-y-3 w-full">
+          <div className="flex items-center gap-2 flex-wrap">
+            <HardDrive className="h-4 w-4 text-dsc-blue" />
+            <span className="text-sm font-semibold text-dsc-text">OneDrive Storage</span>
+            <Badge variant={quotaState === "normal" ? "compliant" : quotaState === "nearing" ? "drifted" : "error"}>{quotaState}</Badge>
+            <span className="text-xs text-dsc-text-secondary ml-auto">{driveType}</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border text-center">
+              <p className="text-lg font-bold text-dsc-text">{totalGB.toFixed(1)}</p>
+              <p className="text-[10px] text-dsc-text-secondary">Total GB</p>
+            </div>
+            <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border text-center">
+              <p className="text-lg font-bold" style={{ color: dialColor }}>{usedGB.toFixed(2)}</p>
+              <p className="text-[10px] text-dsc-text-secondary">Used GB</p>
+            </div>
+            <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border text-center">
+              <p className="text-lg font-bold text-dsc-green">{remainingGB.toFixed(1)}</p>
+              <p className="text-[10px] text-dsc-text-secondary">Remaining GB</p>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between text-[10px] text-dsc-text-secondary mb-1">
+              <span>{usedGB.toFixed(2)} GB of {totalGB.toFixed(1)} GB</span>
+              <span>{remainingGB.toFixed(1)} GB free</span>
+            </div>
+            <div className="h-2.5 rounded-full bg-gray-100">
+              <div className="h-2.5 rounded-full transition-all duration-700" style={{ width: `${Math.min(usedPct, 100)}%`, backgroundColor: dialColor }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Forecast Callout */}
+      <div className={`mt-4 p-3 rounded-lg ${stateBg} border border-dsc-border/50`}>
+        <div className="flex items-start gap-2">
+          <div className="flex-shrink-0 mt-0.5">
+            {usedPct >= 90 ? <XCircle className="h-4 w-4 text-dsc-red" /> : usedPct >= 70 ? <AlertTriangle className="h-4 w-4 text-dsc-yellow" /> : <CheckCircle2 className="h-4 w-4 text-dsc-green" />}
+          </div>
+          <div>
+            <p className={`text-sm font-medium ${stateColor}`}>{remainingGB.toFixed(1)} GB remaining</p>
+            <p className="text-xs text-dsc-text-secondary mt-0.5">
+              {daysUntilFull > 365 * 5
+                ? "At current usage rates, storage is projected to last well beyond 5 years."
+                : daysUntilFull > 365
+                  ? `At current usage rates, storage is projected to last approximately ${Math.round(daysUntilFull / 365)} year${Math.round(daysUntilFull / 365) > 1 ? "s" : ""} (until ~${forecastDate.toLocaleDateString("en-US", { month: "short", year: "numeric" })}).`
+                  : daysUntilFull > 30
+                    ? `⚠️ At current usage rates, storage will be full in approximately ${daysUntilFull} days (~${forecastDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}).`
+                    : `🚨 Critical: Storage projected to be full in ${daysUntilFull} days (~${forecastDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}). Take action now.`}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
