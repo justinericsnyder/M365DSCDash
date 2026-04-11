@@ -60,10 +60,13 @@ export async function POST() {
     // ─── 3. Sync Agent Registry (Copilot Packages) ─────
     results.agents = await syncAgentRegistry(accessToken, tenant.id);
 
-    // ─── 4. Sync Organization Info ──────────────────────
+    // ─── 4. Sync AI / Copilot Settings ─────────────────
+    results.aiCopilot = await syncAICopilotSettings(accessToken, tenant.id);
+
+    // ─── 5. Sync Organization Info ──────────────────────
     results.organization = await syncOrganization(accessToken, tenant.id, tenant.defaultDomain, tenant.displayName);
 
-    // ─── 5. Sync User Profile ───────────────────────────
+    // ─── 6. Sync User Profile ───────────────────────────
     results.profile = await syncUserProfile(accessToken, tenant.id);
 
     // Invalidate caches
@@ -71,6 +74,7 @@ export async function POST() {
     await cacheInvalidate("agents:*");
     await cacheInvalidate("m365:*");
     await cacheInvalidate("dashboard:*");
+    await cacheInvalidate("ai:*");
 
     // Update last sync
     await prisma.m365Tenant.update({
@@ -680,6 +684,117 @@ async function syncUserProfile(token: string, tenantId: string): Promise<SyncRes
     return { success: true };
   }
   return { success: false, error: res.error || "Could not fetch user profile" };
+}
+
+// ─── AI / Copilot Settings ──────────────────────────────
+// Syncs Copilot admin settings and AI-related configurations
+
+async function syncAICopilotSettings(token: string, tenantId: string): Promise<SyncResult> {
+  const resources: Array<{
+    workload: string; resourceType: string; displayName: string;
+    properties: Record<string, unknown>; status: "COMPLIANT" | "DRIFTED"; differingProperties: string[];
+  }> = [];
+
+  // ─── Copilot Limited Mode ─────────────────────────────
+  // GET /copilot/admin/settings/limitedMode (v1.0 + beta)
+  const limitedMode = await tryGraphGet(token, "/copilot/admin/settings/limitedMode");
+  if (!limitedMode.data) {
+    // Try beta
+    const limitedModeBeta = await tryGraphGet(token, "/copilot/admin/settings/limitedMode", true);
+    if (limitedModeBeta.data) {
+      const lm = limitedModeBeta.data as any;
+      resources.push({
+        workload: "AAD", resourceType: "CopilotLimitedMode",
+        displayName: "Copilot Limited Mode",
+        properties: { IsEnabledForGroup: lm.isEnabledForGroup, GroupId: lm.groupId },
+        status: "COMPLIANT", differingProperties: [],
+      });
+    }
+  } else {
+    const lm = limitedMode.data as any;
+    resources.push({
+      workload: "AAD", resourceType: "CopilotLimitedMode",
+      displayName: "Copilot Limited Mode",
+      properties: { IsEnabledForGroup: lm.isEnabledForGroup, GroupId: lm.groupId },
+      status: "COMPLIANT", differingProperties: [],
+    });
+  }
+
+  // ─── Copilot Pinned Agents ────────────────────────────
+  const pinnedAgents = await tryGraphGet(token, "/copilot/admin/settings/pinnedAgents", true);
+  if (pinnedAgents.data) {
+    const pa = pinnedAgents.data as any;
+    const agents = pa.value || (pa.pinnedAgents ? [pa] : []);
+    for (const agent of agents) {
+      resources.push({
+        workload: "AAD", resourceType: "CopilotPinnedAgent",
+        displayName: agent.displayName || agent.agentId || "Pinned Agent",
+        properties: { AgentId: agent.agentId, DisplayName: agent.displayName, Scope: agent.scope, ...agent },
+        status: "COMPLIANT", differingProperties: [],
+      });
+    }
+  }
+
+  // ─── Graph Connectors (Copilot data sources) ──────────
+  const connectors = await tryGraphGet(token, "/external/connections");
+  if (connectors.data) {
+    for (const conn of ((connectors.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "CopilotGraphConnector",
+        displayName: conn.name || conn.id || "Graph Connector",
+        properties: { Id: conn.id, Name: conn.name, Description: conn.description, State: conn.state, ConnectorId: conn.connectorId },
+        status: conn.state === "ready" ? "COMPLIANT" : "DRIFTED",
+        differingProperties: conn.state !== "ready" ? ["ConnectorState"] : [],
+      });
+    }
+  }
+
+  // ─── Service Principals (AI/Copilot related) ──────────
+  const aiServicePrincipals = await tryGraphGet(token, "/servicePrincipals?$filter=startswith(displayName,'Microsoft Copilot') or startswith(displayName,'Copilot') or startswith(displayName,'Microsoft 365 Copilot')&$top=20");
+  if (aiServicePrincipals.data) {
+    for (const sp of ((aiServicePrincipals.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "CopilotServicePrincipal",
+        displayName: sp.displayName || "Copilot Service",
+        properties: { AppId: sp.appId, DisplayName: sp.displayName, AccountEnabled: sp.accountEnabled, ServicePrincipalType: sp.servicePrincipalType, SignInAudience: sp.signInAudience, AppOwnerOrganizationId: sp.appOwnerOrganizationId },
+        status: sp.accountEnabled ? "COMPLIANT" : "DRIFTED",
+        differingProperties: sp.accountEnabled ? [] : ["AccountEnabled"],
+      });
+    }
+  }
+
+  // ─── AI Builder / Power Platform AI ───────────────────
+  const ppAI = await tryGraphGet(token, "/admin/powerPlatform/settings", true);
+  if (ppAI.data) {
+    const settings = ppAI.data as any;
+    resources.push({
+      workload: "PP", resourceType: "PowerPlatformAISettings",
+      displayName: "Power Platform AI Settings",
+      properties: { ...settings },
+      status: "COMPLIANT", differingProperties: [],
+    });
+  }
+
+  if (resources.length === 0) {
+    return {
+      success: true, count: 0,
+      reason: "No AI/Copilot settings accessible. Some endpoints require Copilot licensing or specific admin roles.",
+    };
+  }
+
+  // Store as M365 resources under the AI-related workloads
+  for (const res of resources) {
+    await prisma.m365Resource.create({
+      data: {
+        tenantId, workload: res.workload as any,
+        resourceType: res.resourceType, displayName: res.displayName, primaryKey: res.displayName,
+        properties: res.properties as object, desiredState: res.properties as object, actualState: res.properties as object,
+        status: res.status, differingProperties: res.differingProperties, lastChecked: new Date(),
+      },
+    });
+  }
+
+  return { success: true, count: resources.length };
 }
 
 // ─── Helpers ────────────────────────────────────────────

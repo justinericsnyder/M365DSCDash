@@ -7,10 +7,12 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Server, FileCode2, AlertTriangle, Upload,
   Settings, Blocks, Cloud, Bot, ShieldCheck, History, Menu, X,
+  Sparkles,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard, color: "text-dsc-blue" },
+  { href: "/ai", label: "AI Governance", icon: Sparkles, color: "text-purple-600" },
   { href: "/m365", label: "M365 DSC", icon: Cloud, color: "text-dsc-blue" },
   { href: "/purview", label: "Purview Labels", icon: ShieldCheck, color: "text-purple-600" },
   { href: "/agents", label: "Agent Registry", icon: Bot, color: "text-dsc-green" },

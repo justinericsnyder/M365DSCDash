@@ -49,6 +49,11 @@ export async function GET() {
       // Agent endpoints
       { name: "Copilot Packages", path: "/copilot/admin/catalog/packages", beta: true },
       { name: "Teams Apps (org)", path: "/appCatalogs/teamsApps?$filter=distributionMethod eq 'organization'", beta: false },
+      // AI / Copilot endpoints
+      { name: "Copilot Limited Mode", path: "/copilot/admin/settings/limitedMode", beta: false },
+      { name: "Copilot Limited Mode (beta)", path: "/copilot/admin/settings/limitedMode", beta: true },
+      { name: "Graph Connectors", path: "/external/connections", beta: false },
+      { name: "Copilot Service Principals", path: "/servicePrincipals?$filter=startswith(displayName,'Microsoft Copilot')&$top=5", beta: false },
     ];
 
     const results: Array<{ name: string; path: string; status: string; count?: number; error?: string }> = [];
