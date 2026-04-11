@@ -52,6 +52,9 @@ function SettingsContent() {
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [syncResults, setSyncResults] = useState<Record<string, { success: boolean; count?: number; error?: string; skipped?: boolean; reason?: string }> | null>(null);
+  const [endpointStatus, setEndpointStatus] = useState<Array<{ name: string; status: string; count?: number; error?: string }> | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     const [authRes, msRes] = await Promise.all([
@@ -60,7 +63,24 @@ function SettingsContent() {
     ]);
     if (authRes.authenticated) setUser(authRes.user);
     setMsStatus(msRes);
+
+    // If connected, also fetch endpoint status
+    if (msRes.connected) {
+      fetchEndpointStatus();
+    }
   }, []);
+
+  const fetchEndpointStatus = async () => {
+    setLoadingStatus(true);
+    try {
+      const res = await fetch("/api/microsoft/sync/debug");
+      if (res.ok) {
+        const data = await res.json();
+        setEndpointStatus(data.results || []);
+      }
+    } catch { /* ignore */ }
+    finally { setLoadingStatus(false); }
+  };
 
   useEffect(() => {
     fetchStatus();
@@ -111,24 +131,15 @@ function SettingsContent() {
 
   const handleSync = async () => {
     setSyncing(true);
+    setSyncResults(null);
     try {
       const res = await fetch("/api/microsoft/sync", { method: "POST" });
       const data = await res.json();
       if (data.success) {
         toast.success(data.message);
-        const r = data.results as Record<string, { success: boolean; count?: number; error?: string; skipped?: boolean; reason?: string }>;
-        for (const [key, val] of Object.entries(r)) {
-          if (val.success && val.count !== undefined) {
-            toast.success(`✓ ${key}: ${val.count} items synced`, { duration: 3000 });
-          } else if (val.success) {
-            toast.success(`✓ ${key}: synced`, { duration: 3000 });
-          } else if (val.skipped) {
-            toast(`${key}: ${val.reason || "Not available on your license"}`, { icon: "ℹ️", duration: 6000 });
-          } else {
-            toast(`${key}: ${val.error}`, { icon: "⚠️", duration: 5000 });
-          }
-        }
+        setSyncResults(data.results);
         fetchStatus();
+        fetchEndpointStatus();
       } else {
         toast.error(data.error || "Sync failed");
       }
@@ -235,6 +246,85 @@ function SettingsContent() {
                   <Unlink className="h-3.5 w-3.5" />Disconnect
                 </Button>
               </div>
+
+              {/* ─── Sync Results ──────────────────────── */}
+              {syncResults && (
+                <div className="p-4 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <h4 className="text-sm font-semibold text-dsc-text mb-3">Last Sync Results</h4>
+                  <div className="space-y-2">
+                    {Object.entries(syncResults).map(([key, val]) => (
+                      <div key={key} className="flex items-center justify-between p-2 rounded-md bg-white border border-dsc-border/50">
+                        <div className="flex items-center gap-2">
+                          {val.success ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-dsc-green flex-shrink-0" />
+                          ) : val.skipped ? (
+                            <AlertTriangle className="h-3.5 w-3.5 text-dsc-yellow flex-shrink-0" />
+                          ) : (
+                            <AlertTriangle className="h-3.5 w-3.5 text-dsc-red flex-shrink-0" />
+                          )}
+                          <span className="text-sm font-medium text-dsc-text">{key}</span>
+                        </div>
+                        <div className="text-right">
+                          {val.success && val.count !== undefined ? (
+                            <span className="text-xs text-dsc-green font-medium">{val.count} items</span>
+                          ) : val.success ? (
+                            <span className="text-xs text-dsc-green font-medium">Synced</span>
+                          ) : val.skipped ? (
+                            <span className="text-xs text-dsc-yellow">{val.reason?.substring(0, 60)}...</span>
+                          ) : (
+                            <span className="text-xs text-dsc-red">{val.error?.substring(0, 60)}...</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ─── Endpoint Status ───────────────────── */}
+              {endpointStatus && (
+                <div className="p-4 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-dsc-text">API Endpoint Status</h4>
+                    <div className="flex items-center gap-3 text-xs text-dsc-text-secondary">
+                      <span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-dsc-green" />{endpointStatus.filter((e) => e.status.includes("OK")).length} working</span>
+                      <span className="flex items-center gap-1"><AlertTriangle className="h-3 w-3 text-dsc-red" />{endpointStatus.filter((e) => !e.status.includes("OK")).length} failed</span>
+                      <button onClick={fetchEndpointStatus} className="text-dsc-blue hover:underline" disabled={loadingStatus}>
+                        {loadingStatus ? "Checking..." : "Refresh"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {endpointStatus.map((ep, i) => {
+                      const isOk = ep.status.includes("OK");
+                      const hasData = ep.count !== undefined && ep.count > 0;
+                      return (
+                        <div key={i} className={`flex items-center justify-between p-2 rounded-md text-xs ${isOk ? "bg-white" : "bg-dsc-red-50/50"} border border-dsc-border/50`}>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {isOk ? (
+                              hasData ? <CheckCircle2 className="h-3 w-3 text-dsc-green flex-shrink-0" /> : <div className="h-3 w-3 rounded-full bg-gray-200 flex-shrink-0" />
+                            ) : (
+                              <AlertTriangle className="h-3 w-3 text-dsc-red flex-shrink-0" />
+                            )}
+                            <span className={`truncate ${isOk ? "text-dsc-text" : "text-dsc-red"}`}>{ep.name}</span>
+                          </div>
+                          <div className="flex-shrink-0 ml-2">
+                            {isOk ? (
+                              ep.count !== undefined ? (
+                                <span className={`font-medium ${hasData ? "text-dsc-green" : "text-dsc-text-secondary"}`}>{ep.count}</span>
+                              ) : (
+                                <span className="text-dsc-green">✓</span>
+                              )
+                            ) : (
+                              <span className="text-dsc-red">{ep.status.split(" ")[0]}</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             /* Authenticated but not connected — onboarding */
