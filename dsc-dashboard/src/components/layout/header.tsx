@@ -78,7 +78,7 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-dsc-border bg-white/80 backdrop-blur-sm px-4 lg:px-6">
+    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-dsc-border bg-dsc-surface/90 backdrop-blur-sm px-4 lg:px-6">
       {/* Search — hidden on small screens, compact on medium */}
       <div className="relative w-full max-w-xs sm:max-w-sm lg:max-w-md ml-10 lg:ml-0" ref={searchRef}>
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dsc-text-secondary" />
@@ -91,7 +91,7 @@ export function Header() {
           onFocus={() => results.length > 0 && setShowResults(true)}
         />
         {showResults && results.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border border-dsc-border shadow-lg max-h-80 overflow-y-auto z-50">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-dsc-surface rounded-lg border border-dsc-border shadow-lg max-h-80 overflow-y-auto z-50">
             {results.map((r) => (
               <Link
                 key={`${r.type}-${r.id}`}
@@ -111,7 +111,7 @@ export function Header() {
           </div>
         )}
         {showResults && query.length >= 2 && results.length === 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg border border-dsc-border shadow-lg p-4 text-center text-sm text-dsc-text-secondary z-50">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-dsc-surface rounded-lg border border-dsc-border shadow-lg p-4 text-center text-sm text-dsc-text-secondary z-50">
             No results for &ldquo;{query}&rdquo;
           </div>
         )}
@@ -123,7 +123,7 @@ export function Header() {
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-dsc-bg transition-colors"
             >
               <div className="h-8 w-8 rounded-full bg-gradient-to-br from-dsc-blue to-dsc-green flex items-center justify-center text-white text-xs font-bold">
                 {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
@@ -139,7 +139,7 @@ export function Header() {
             </button>
 
             {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg border border-dsc-border shadow-lg z-50 py-1">
+              <div className="absolute right-0 top-full mt-1 w-56 bg-dsc-surface rounded-lg border border-dsc-border shadow-lg z-50 py-1">
                 <div className="px-4 py-2 border-b border-dsc-border">
                   <p className="text-sm font-medium text-dsc-text">{user.name}</p>
                   <p className="text-xs text-dsc-text-secondary">{user.email}</p>
@@ -168,3 +168,4 @@ export function Header() {
     </header>
   );
 }
+

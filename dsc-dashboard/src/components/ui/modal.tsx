@@ -36,7 +36,7 @@ export function Modal({ open, onClose, title, children, className, wide }: Modal
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div className={cn(
-        "bg-white rounded-xl border border-dsc-border shadow-2xl max-h-[85vh] overflow-hidden flex flex-col",
+        "bg-dsc-surface rounded-xl border border-dsc-border shadow-2xl max-h-[85vh] overflow-hidden flex flex-col animate-fade-scale-in",
         wide ? "w-full max-w-3xl" : "w-full max-w-lg",
         className
       )}>

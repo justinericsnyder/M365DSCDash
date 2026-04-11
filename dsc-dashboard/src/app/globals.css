@@ -1,24 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --color-red: #E53E3E;
-  --color-red-light: #FED7D7;
-  --color-red-50: #FFF5F5;
-  --color-blue: #3182CE;
-  --color-blue-light: #BEE3F8;
-  --color-blue-50: #EBF8FF;
-  --color-green: #38A169;
-  --color-green-light: #C6F6D5;
-  --color-green-50: #F0FFF4;
-  --color-yellow: #D69E2E;
-  --color-yellow-light: #FEFCBF;
-  --color-yellow-50: #FFFFF0;
-  --color-bg: #FAFBFC;
-  --color-surface: #FFFFFF;
-  --color-border: #E2E8F0;
-  --color-text: #1A202C;
-  --color-text-secondary: #718096;
-  --color-sidebar: #F7FAFC;
+  /* Dark Mauve Theme */
+  --color-red: #F56565;
+  --color-red-light: #4A2030;
+  --color-red-50: #2D1520;
+  --color-blue: #63B3ED;
+  --color-blue-light: #1A3A5C;
+  --color-blue-50: #152A42;
+  --color-green: #68D391;
+  --color-green-light: #1A3A2A;
+  --color-green-50: #152D22;
+  --color-yellow: #F6E05E;
+  --color-yellow-light: #3D3520;
+  --color-yellow-50: #2D2818;
+  --color-bg: #1A1625;
+  --color-surface: #241E33;
+  --color-border: #362E4A;
+  --color-text: #E8E0F0;
+  --color-text-secondary: #9B8FB8;
+  --color-sidebar: #1E1830;
 }
 
 @theme {
@@ -51,24 +52,70 @@ body {
 /* Smooth scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #A0AEC0; }
+::-webkit-scrollbar-thumb { background: #4A3F65; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #6B5F8A; }
 
-/* Card hover effect */
+/* Card hover — weighty with gravity */
 .card-hover {
-  transition: box-shadow 0.2s ease, transform 0.15s ease;
+  transition: box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .card-hover:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 2px 8px rgba(100,70,180,0.15);
+  transform: translateY(-3px);
+}
+.card-hover:active {
+  transform: translateY(0px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
 /* Status pulse animation */
 @keyframes pulse-dot {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  50% { opacity: 0.3; }
 }
 .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* Gravity bounce for elements entering */
+@keyframes gravity-in {
+  0% { opacity: 0; transform: translateY(-12px); }
+  60% { transform: translateY(2px); }
+  80% { transform: translateY(-1px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-gravity-in {
+  animation: gravity-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Fade scale for modals and expanded content */
+@keyframes fade-scale-in {
+  0% { opacity: 0; transform: scale(0.95) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-fade-scale-in {
+  animation: fade-scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Slide down for expandable sections */
+@keyframes slide-down {
+  0% { opacity: 0; max-height: 0; transform: translateY(-4px); }
+  100% { opacity: 1; max-height: 2000px; transform: translateY(0); }
+}
+.animate-slide-down {
+  animation: slide-down 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  overflow: hidden;
+}
+
+/* Stagger children animation */
+.stagger-children > * {
+  animation: gravity-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
 
 /* Code editor styling */
 .code-editor {
@@ -76,4 +123,17 @@ body {
   font-size: 13px;
   line-height: 1.6;
   tab-size: 2;
+  background-color: #1E1830;
+  color: #C4B5D8;
+}
+
+/* Override white backgrounds for dark mode */
+input, select, textarea {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text) !important;
+  border-color: var(--color-border) !important;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--color-text-secondary) !important;
+  opacity: 0.6;
 }
