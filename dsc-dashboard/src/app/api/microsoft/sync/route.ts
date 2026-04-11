@@ -494,11 +494,18 @@ async function syncPurviewLabels(token: string, tenantId: string): Promise<SyncR
     { path: "/me/security/informationProtection/sensitivityLabels", beta: true, name: "beta user-scoped" },
   ];
 
+  let apiAccessible = false;
+
   for (const ep of endpoints) {
     const res = await tryGraphGet(token, ep.path, ep.beta);
     if (res.data) {
+      apiAccessible = true;
       const labels = (res.data as any).value || [];
-      if (labels.length === 0) continue; // try next endpoint
+
+      if (labels.length === 0) {
+        // API works but no labels — check next endpoint for more results
+        continue;
+      }
 
       // Clear existing
       await prisma.purviewLabelDrift.deleteMany({ where: { tenantId } });
@@ -565,12 +572,20 @@ async function syncPurviewLabels(token: string, tenantId: string): Promise<SyncR
     }
   }
 
-  // All endpoints failed
+  // All endpoints either failed or returned empty
+  if (apiAccessible) {
+    return {
+      success: true,
+      count: 0,
+      reason: "Purview API accessible but no published labels found. Newly published labels can take up to 24 hours to appear in the Graph API. Try syncing again later.",
+    };
+  }
+
   return {
     success: false,
     skipped: true,
     reason: "Requires Microsoft 365 E3/E5 or Microsoft Purview license",
-    error: "Sensitivity labels API not available. This feature requires Microsoft Purview licensing (E3/E5). Your tenant data will use demo labels instead.",
+    error: "Sensitivity labels API not available. This feature requires Microsoft Purview licensing (E3/E5).",
   };
 }
 
@@ -624,8 +639,8 @@ async function syncAgentRegistry(token: string, tenantId: string): Promise<SyncR
   return {
     success: false,
     skipped: true,
-    reason: "Requires Microsoft 365 Copilot license or Frontier preview",
-    error: "Agent Registry API not available. This requires a Copilot license. Your tenant data will use demo agents instead.",
+    reason: "Copilot Packages API requires AI Admin role + Frontier preview enrollment",
+    error: "The Copilot Packages API requires the AI Admin role assigned to the connecting user AND enrollment in Microsoft's Frontier preview program. Without Frontier access, this API returns 403.",
   };
 }
 
