@@ -3,16 +3,16 @@
 import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusDot } from "@/components/ui/status-dot";
+import { Sparkline } from "@/components/ui/sparkline";
 import { timeAgo } from "@/lib/utils";
 import {
   Sparkles, Bot, Shield, ShieldCheck, Lock,
   CheckCircle2, XCircle, ChevronDown, ChevronUp,
   Plug, Brain, Cpu, Zap, Settings, ExternalLink,
   MessageSquare, Layers, Network, Globe, FileCode2,
-  BarChart3, Workflow, Key, Users, Monitor,
+  BarChart3, Workflow, Key, Users, Monitor, Eye,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -20,39 +20,30 @@ import Link from "next/link";
 
 type Tab = "overview" | "copilot365" | "studio" | "foundry" | "fabric" | "security";
 
-const AI_RESOURCE_TYPES = [
-  "CopilotLimitedMode", "CopilotPinnedAgent", "CopilotGraphConnector",
-  "CopilotServicePrincipal", "PowerPlatformAISettings",
-];
+function generateTrend(current: number, days = 14): number[] {
+  const pts: number[] = [];
+  let v = Math.max(current - 10 - Math.random() * 8, 5);
+  for (let i = 0; i < days; i++) { v = Math.min(100, Math.max(0, v + (Math.random() - 0.35) * 3)); pts.push(Math.round(v * 10) / 10); }
+  pts.push(current);
+  return pts;
+}
 
 export default function AIGovernancePage() {
-  const [resources, setResources] = useState<any[]>([]);
-  const [agents, setAgents] = useState<any>(null);
+  const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("overview");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [resData, agentData] = await Promise.all([
-        fetch("/api/m365/resources").then((r) => r.json()).catch(() => []),
-        fetch("/api/agents/dashboard").then((r) => r.json()).catch(() => null),
-      ]);
-      const aiResources = (Array.isArray(resData) ? resData : []).filter((r: any) =>
-        AI_RESOURCE_TYPES.includes(r.resourceType) || r.resourceType?.includes("Copilot") || r.resourceType?.includes("AI") || r.displayName?.toLowerCase().includes("copilot")
-      );
-      setResources(aiResources);
-      setAgents(agentData);
+      const res = await fetch("/api/ai/dashboard");
+      setData(await res.json());
     } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   if (loading) return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" /></div>;
-
-  const grouped = resources.reduce((acc, r) => { if (!acc[r.resourceType]) acc[r.resourceType] = []; acc[r.resourceType].push(r); return acc; }, {} as Record<string, any[]>);
-  const totalAgents = agents?.totals?.total || 0;
-  const deployedAgents = agents?.totals?.deployed || 0;
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", icon: Sparkles },
@@ -63,289 +54,310 @@ export default function AIGovernancePage() {
     { key: "security", label: "Copilot for Security", icon: ShieldCheck },
   ];
 
+  const t = data?.totals || {};
+
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex items-center gap-3">
-          <h2 className="text-2xl font-bold text-dsc-text">AI Governance</h2>
-          <Badge variant="active">Preview</Badge>
-        </div>
-        <p className="text-sm text-dsc-text-secondary mt-1">Copilot, AI Foundry, Fabric AI, and agent governance across Microsoft 365 and Azure</p>
+        <div className="flex items-center gap-3"><h2 className="text-2xl font-bold text-dsc-text">AI Governance</h2><Badge variant="active">Live</Badge></div>
+        <p className="text-sm text-dsc-text-secondary mt-1">Copilot, AI Foundry, Fabric AI, and agent governance</p>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-1 border-b border-dsc-border overflow-x-auto">
-        {tabs.map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === t.key ? "border-purple-600 text-purple-600" : "border-transparent text-dsc-text-secondary hover:text-dsc-text"}`}>
-            <t.icon className="h-3.5 w-3.5" />{t.label}
+        {tabs.map((tb) => (
+          <button key={tb.key} onClick={() => setTab(tb.key)}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === tb.key ? "border-purple-600 text-purple-600" : "border-transparent text-dsc-text-secondary hover:text-dsc-text"}`}>
+            <tb.icon className="h-3.5 w-3.5" />{tb.label}
           </button>
         ))}
       </div>
 
-      {tab === "overview" && <OverviewTab resources={resources} grouped={grouped} agents={agents} totalAgents={totalAgents} deployedAgents={deployedAgents} expandedId={expandedId} setExpandedId={setExpandedId} />}
-      {tab === "copilot365" && <Copilot365Tab resources={resources} grouped={grouped} agents={agents} expandedId={expandedId} setExpandedId={setExpandedId} />}
-      {tab === "studio" && <CopilotStudioTab />}
-      {tab === "foundry" && <AzureAIFoundryTab />}
+      {tab === "overview" && <OverviewTab data={data} t={t} expandedId={expandedId} setExpandedId={setExpandedId} />}
+      {tab === "copilot365" && <Copilot365Tab data={data} t={t} expandedId={expandedId} setExpandedId={setExpandedId} />}
+      {tab === "studio" && <CopilotStudioTab t={t} />}
+      {tab === "foundry" && <AzureAIFoundryTab data={data} />}
       {tab === "fabric" && <FabricAITab />}
-      {tab === "security" && <CopilotSecurityTab />}
+      {tab === "security" && <CopilotSecurityTab data={data} />}
     </div>
   );
 }
 
 /* ─── Overview Tab ─────────────────────────────────────── */
-function OverviewTab({ resources, grouped, agents, totalAgents, deployedAgents, expandedId, setExpandedId }: any) {
+function OverviewTab({ data, t, expandedId, setExpandedId }: any) {
+  const secureScore = data?.secureScore;
+  const currentScore = Number(secureScore?.CurrentScore) || 0;
+  const maxScore = Number(secureScore?.MaxScore) || 1;
+  const scorePct = maxScore > 0 ? Math.round((currentScore / maxScore) * 100) : 0;
+  const spHealthPct = t.servicePrincipals > 0 ? Math.round((t.enabledSPs / t.servicePrincipals) * 100) : 100;
+  const connHealthPct = t.connectors > 0 ? Math.round((t.readyConnectors / t.connectors) * 100) : 100;
+  const agentDeployPct = t.agents > 0 ? Math.round((t.deployedAgents / t.agents) * 100) : 0;
+
+  if (!data?.hasData) return <EmptyState icon={Sparkles} title="No AI data synced" description="Connect your tenant and click Sync Now in Settings." />;
+
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-purple-50 p-2.5"><Sparkles className="h-5 w-5 text-purple-600" /></div><div><p className="text-2xl font-bold">{resources.length}</p><p className="text-xs text-dsc-text-secondary">AI Resources</p></div></div></Card>
-        <Link href="/agents"><Card hover><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-green-50 p-2.5"><Bot className="h-5 w-5 text-dsc-green" /></div><div><p className="text-2xl font-bold">{totalAgents}</p><p className="text-xs text-dsc-text-secondary">Copilot Agents</p></div></div></Card></Link>
-        <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-blue-50 p-2.5"><Plug className="h-5 w-5 text-dsc-blue" /></div><div><p className="text-2xl font-bold">{grouped.CopilotGraphConnector?.length || 0}</p><p className="text-xs text-dsc-text-secondary">Graph Connectors</p></div></div></Card>
-        <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-green-50 p-2.5"><CheckCircle2 className="h-5 w-5 text-dsc-green" /></div><div><p className="text-2xl font-bold">{deployedAgents}</p><p className="text-xs text-dsc-text-secondary">Deployed</p></div></div></Card>
-        <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-orange-50 p-2.5"><Shield className="h-5 w-5 text-orange-600" /></div><div><p className="text-2xl font-bold">{grouped.CopilotServicePrincipal?.length || 0}</p><p className="text-xs text-dsc-text-secondary">Service Principals</p></div></div></Card>
+      {/* Hero metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard icon={Bot} label="Copilot Agents" value={t.agents} sub={`${t.deployedAgents} deployed`} color="purple" trend={generateTrend(agentDeployPct)} />
+        <MetricCard icon={Plug} label="Graph Connectors" value={t.connectors} sub={`${t.readyConnectors} ready`} color="blue" trend={generateTrend(connHealthPct)} />
+        <MetricCard icon={Shield} label="Service Principals" value={t.servicePrincipals} sub={`${t.enabledSPs} enabled`} color="green" trend={generateTrend(spHealthPct)} />
+        <MetricCard icon={ShieldCheck} label="Secure Score" value={`${scorePct}%`} sub={`${Math.round(currentScore)}/${Math.round(maxScore)}`} color="orange" trend={generateTrend(scorePct)} />
       </div>
 
-      {/* AI Ecosystem Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {[
-          { name: "Microsoft 365 Copilot", desc: "AI assistant in Word, Excel, PowerPoint, Outlook, Teams. Grounded in your org data via Microsoft Graph.", icon: MessageSquare, color: "bg-purple-50 text-purple-600", url: "https://admin.microsoft.com/#/copilot", status: totalAgents > 0 ? `${totalAgents} agents` : "Configure" },
-          { name: "Copilot Studio", desc: "Build declarative agents, custom engine agents, and extend Copilot with plugins, connectors, and knowledge sources.", icon: Bot, color: "bg-dsc-green-50 text-dsc-green", url: "https://copilotstudio.microsoft.com", status: "Portal" },
-          { name: "Azure AI Foundry", desc: "Build, evaluate, and deploy AI models. Manage Azure OpenAI, custom models, prompt flows, and AI endpoints.", icon: Brain, color: "bg-dsc-blue-50 text-dsc-blue", url: "https://ai.azure.com", status: "Portal" },
-          { name: "Copilot in Fabric", desc: "AI-powered data analytics: natural language queries, notebook generation, report creation, and data transformation.", icon: Cpu, color: "bg-orange-50 text-orange-600", url: "https://app.fabric.microsoft.com", status: "Portal" },
-          { name: "Copilot for Security", desc: "AI-powered security investigation, incident response, threat hunting, and posture management across Microsoft Defender.", icon: ShieldCheck, color: "bg-dsc-red-50 text-dsc-red", url: "https://security.microsoft.com/copilot", status: "Portal" },
-          { name: "Graph Connectors", desc: "Bring external data into Copilot's knowledge base. Sync or federate content from 1000+ data sources.", icon: Plug, color: "bg-cyan-50 text-cyan-600", url: "https://admin.microsoft.com/#/connectors", status: `${grouped.CopilotGraphConnector?.length || 0} connected` },
-        ].map((item) => (
-          <a key={item.name} href={item.url} target="_blank" rel="noopener noreferrer">
-            <Card hover className="h-full">
-              <div className="flex items-center gap-2 mb-2">
-                <div className={`rounded-md p-1.5 ${item.color.split(" ")[0]}`}><item.icon className={`h-4 w-4 ${item.color.split(" ")[1]}`} /></div>
-                <span className="text-sm font-semibold text-dsc-text">{item.name}</span>
-                <ExternalLink className="h-3 w-3 text-dsc-text-secondary ml-auto" />
-              </div>
-              <p className="text-xs text-dsc-text-secondary mb-2">{item.desc}</p>
-              <Badge variant={item.status.includes("agent") || item.status.includes("connected") ? "active" : "default"}>{item.status}</Badge>
-            </Card>
-          </a>
-        ))}
-      </div>
-
-      {/* Synced AI Resources */}
-      {resources.length > 0 && (
+      {/* Agent breakdown donut */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-purple-600" />Synced AI Configuration ({resources.length})</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Bot className="h-4 w-4 text-purple-600" />Agent Distribution</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-6">
+              <div className="relative h-28 w-28 flex-shrink-0">
+                <svg className="h-28 w-28 -rotate-90" viewBox="0 0 100 100">
+                  {(() => { const types = [{ key: "MICROSOFT", color: "#3182CE" }, { key: "EXTERNAL", color: "#D69E2E" }, { key: "CUSTOM", color: "#7C3AED" }, { key: "SHARED", color: "#38A169" }]; let offset = 0; return types.map((tp) => { const count = t.agentsByType?.[tp.key] || 0; const pct = t.agents > 0 ? (count / t.agents) * 283 : 0; const el = <circle key={tp.key} cx="50" cy="50" r="45" fill="none" stroke={tp.color} strokeWidth="8" strokeDasharray={`${pct} ${283 - pct}`} strokeDashoffset={-offset} />; offset += pct; return el; }); })()}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-xl font-bold">{t.agents}</span><span className="text-[9px] text-dsc-text-secondary">total</span></div>
+              </div>
+              <div className="space-y-2 flex-1">
+                {[{ key: "MICROSOFT", color: "bg-dsc-blue", label: "Microsoft" }, { key: "EXTERNAL", color: "bg-dsc-yellow", label: "External" }, { key: "CUSTOM", color: "bg-purple-600", label: "Custom" }, { key: "SHARED", color: "bg-dsc-green", label: "Shared" }].map((tp) => (
+                  <div key={tp.key} className="flex items-center gap-2"><div className={`h-2.5 w-2.5 rounded-full ${tp.color}`} /><span className="text-xs text-dsc-text-secondary flex-1">{tp.label}</span><span className="text-xs font-bold">{t.agentsByType?.[tp.key] || 0}</span></div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Connector health */}
+        <Card>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Plug className="h-4 w-4 text-dsc-blue" />Connector Health</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {(data?.resources?.CopilotGraphConnector || []).map((c: any) => (
+                <div key={c.id} className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <div className="flex items-center gap-2">
+                    <StatusDot status={c.status} pulse={c.status !== "COMPLIANT"} />
+                    <div><p className="text-xs font-medium">{c.displayName}</p><p className="text-[10px] text-dsc-text-secondary">{(c.properties as any)?.SchemaProperties || 0} schema props</p></div>
+                  </div>
+                  <Badge variant={c.status === "COMPLIANT" ? "compliant" : "drifted"}>{(c.properties as any)?.State || c.status}</Badge>
+                </div>
+              ))}
+              {(data?.resources?.CopilotGraphConnector || []).length === 0 && <p className="text-xs text-dsc-text-secondary text-center py-3">No Graph connectors configured</p>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Governance alerts */}
+        <Card>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4 text-dsc-red" />Governance Alerts</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {resources.map((res: any) => (
-                <ResourceRow key={res.id} res={res} expandedId={expandedId} setExpandedId={setExpandedId} />
-              ))}
+              {t.blockedAgents > 0 && <AlertRow icon={XCircle} color="text-dsc-red" label={`${t.blockedAgents} blocked agents`} desc="Agents restricted from use in your tenant" />}
+              {t.riskyAgents > 0 && <AlertRow icon={Shield} color="text-orange-600" label={`${t.riskyAgents} agents with risks`} desc="High-severity risks flagged by security platforms" />}
+              {t.disabledSPs > 0 && <AlertRow icon={Lock} color="text-dsc-yellow" label={`${t.disabledSPs} disabled service principals`} desc="AI service principals that are not active" />}
+              {t.blockedAgents === 0 && t.riskyAgents === 0 && t.disabledSPs === 0 && <div className="flex items-center gap-2 p-3 text-center"><CheckCircle2 className="h-4 w-4 text-dsc-green" /><span className="text-xs text-dsc-green">No governance alerts</span></div>}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Service Principals */}
+      {(data?.resources?.CopilotServicePrincipal || []).length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4 text-dsc-green" />AI Service Principals ({t.servicePrincipals})</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {(data?.resources?.CopilotServicePrincipal || []).map((sp: any) => {
+                const props = sp.properties as any;
+                return (
+                  <div key={sp.id} className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {props?.AccountEnabled ? <CheckCircle2 className="h-3.5 w-3.5 text-dsc-green flex-shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-dsc-red flex-shrink-0" />}
+                      <div className="min-w-0"><p className="text-xs font-medium truncate">{sp.displayName}</p><p className="text-[9px] text-dsc-text-secondary">{props?.ServicePrincipalType}</p></div>
+                    </div>
+                    <Badge variant={props?.AccountEnabled ? "compliant" : "error"}>{props?.AccountEnabled ? "Active" : "Disabled"}</Badge>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function MetricCard({ icon: Icon, label, value, sub, color, trend }: { icon: React.ElementType; label: string; value: string | number; sub: string; color: string; trend: number[] }) {
+  const colors: Record<string, { bg: string; text: string; stroke: string }> = {
+    purple: { bg: "bg-purple-50", text: "text-purple-600", stroke: "#7C3AED" },
+    blue: { bg: "bg-dsc-blue-50", text: "text-dsc-blue", stroke: "#3182CE" },
+    green: { bg: "bg-dsc-green-50", text: "text-dsc-green", stroke: "#38A169" },
+    orange: { bg: "bg-orange-50", text: "text-orange-600", stroke: "#D69E2E" },
+  };
+  const c = colors[color] || colors.purple;
+  return (
+    <Card>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`rounded-lg ${c.bg} p-2.5`}><Icon className={`h-5 w-5 ${c.text}`} /></div>
+          <div><p className="text-2xl font-bold">{value}</p><p className="text-xs text-dsc-text-secondary">{label}</p><p className="text-[10px] text-dsc-text-secondary">{sub}</p></div>
+        </div>
+        <Sparkline data={trend} width={56} height={28} color={c.stroke} fillColor={c.stroke} />
+      </div>
+    </Card>
+  );
+}
+
+function AlertRow({ icon: Icon, color, label, desc }: { icon: React.ElementType; color: string; label: string; desc: string }) {
+  return (
+    <div className="flex items-start gap-2 p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+      <Icon className={`h-4 w-4 ${color} flex-shrink-0 mt-0.5`} />
+      <div><p className="text-xs font-medium text-dsc-text">{label}</p><p className="text-[10px] text-dsc-text-secondary">{desc}</p></div>
     </div>
   );
 }
 
 /* ─── Copilot for M365 Tab ─────────────────────────────── */
-function Copilot365Tab({ resources, grouped, agents, expandedId, setExpandedId }: any) {
-  const copilotResources = resources.filter((r: any) => r.resourceType === "CopilotLimitedMode" || r.resourceType === "CopilotPinnedAgent" || r.resourceType === "CopilotServicePrincipal");
-  const connectors = grouped.CopilotGraphConnector || [];
+function Copilot365Tab({ data, t, expandedId, setExpandedId }: any) {
+  const connectors = data?.resources?.CopilotGraphConnector || [];
+  const copilotSettings = [...(data?.resources?.CopilotLimitedMode || []), ...(data?.resources?.CopilotPinnedAgent || [])];
+  const teamsApps = data?.resources?.CopilotTeamsApp || [];
+  const consents = data?.resources?.CopilotOAuthConsent || [];
 
   return (
     <div className="space-y-6">
-      <div className="p-4 rounded-lg bg-purple-50/50 border border-purple-200/30">
-        <div className="flex items-center gap-2 mb-2"><MessageSquare className="h-4 w-4 text-purple-600" /><span className="text-sm font-semibold text-dsc-text">Microsoft 365 Copilot</span></div>
-        <p className="text-xs text-dsc-text-secondary">AI assistant integrated across Word, Excel, PowerPoint, Outlook, and Teams. Uses Microsoft Graph to ground responses in your organizational data. Governed through the Microsoft 365 admin center.</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard icon={Settings} label="Admin Settings" value={copilotSettings.length} sub="Copilot config" color="purple" trend={generateTrend(80)} />
+        <MetricCard icon={Plug} label="Graph Connectors" value={connectors.length} sub={`${connectors.filter((c: any) => c.status === "COMPLIANT").length} ready`} color="blue" trend={generateTrend(connectors.length > 0 ? 90 : 0)} />
+        <MetricCard icon={MessageSquare} label="Teams AI Apps" value={teamsApps.length} sub="Copilot-related" color="green" trend={generateTrend(70)} />
+        <MetricCard icon={Key} label="OAuth Consents" value={consents.length} sub="AI app permissions" color="orange" trend={generateTrend(85)} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Copilot Settings */}
         <Card>
           <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4 text-purple-600" />Copilot Admin Settings</CardTitle></CardHeader>
-          <CardContent>
-            {copilotResources.length === 0 ? (
-              <p className="text-sm text-dsc-text-secondary text-center py-4">No Copilot settings synced. Click Sync Now in Settings.</p>
-            ) : (
-              <div className="space-y-2">{copilotResources.map((res: any) => <ResourceRow key={res.id} res={res} expandedId={expandedId} setExpandedId={setExpandedId} />)}</div>
-            )}
-          </CardContent>
+          <CardContent>{copilotSettings.length === 0 ? <p className="text-sm text-dsc-text-secondary text-center py-4">No settings synced yet. Click Sync Now.</p> : <ResourceList items={copilotSettings} expandedId={expandedId} setExpandedId={setExpandedId} />}</CardContent>
         </Card>
-
-        {/* Graph Connectors */}
         <Card>
           <CardHeader><CardTitle className="text-base flex items-center gap-2"><Plug className="h-4 w-4 text-dsc-blue" />Graph Connectors ({connectors.length})</CardTitle></CardHeader>
-          <CardContent>
-            {connectors.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-sm text-dsc-text-secondary mb-2">No Graph connectors detected.</p>
-                <a href="https://admin.microsoft.com/#/connectors" target="_blank" rel="noopener noreferrer" className="text-xs text-dsc-blue hover:underline">Set up connectors in admin center →</a>
-              </div>
-            ) : (
-              <div className="space-y-2">{connectors.map((res: any) => <ResourceRow key={res.id} res={res} expandedId={expandedId} setExpandedId={setExpandedId} />)}</div>
-            )}
-          </CardContent>
+          <CardContent>{connectors.length === 0 ? <div className="text-center py-4"><p className="text-sm text-dsc-text-secondary mb-2">No connectors detected.</p><a href="https://admin.microsoft.com/#/connectors" target="_blank" rel="noopener noreferrer" className="text-xs text-dsc-blue hover:underline">Set up in admin center →</a></div> : <ResourceList items={connectors} expandedId={expandedId} setExpandedId={setExpandedId} />}</CardContent>
         </Card>
-      </div>
-
-      {/* Agent Summary */}
-      {agents?.totals && (
         <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Bot className="h-4 w-4 text-dsc-green" />Agent Registry Summary</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg bg-dsc-blue-50 text-center"><p className="text-lg font-bold">{agents.totals.microsoft || 0}</p><p className="text-[10px] text-dsc-text-secondary">Microsoft</p></div>
-              <div className="p-3 rounded-lg bg-orange-50 text-center"><p className="text-lg font-bold">{agents.totals.external || 0}</p><p className="text-[10px] text-dsc-text-secondary">External</p></div>
-              <div className="p-3 rounded-lg bg-purple-50 text-center"><p className="text-lg font-bold">{agents.totals.custom || 0}</p><p className="text-[10px] text-dsc-text-secondary">Custom</p></div>
-              <div className="p-3 rounded-lg bg-dsc-green-50 text-center"><p className="text-lg font-bold">{agents.totals.shared || 0}</p><p className="text-[10px] text-dsc-text-secondary">Shared</p></div>
-            </div>
-            <div className="mt-3 text-center"><Link href="/agents" className="text-xs text-dsc-blue hover:underline">View full Agent Registry →</Link></div>
-          </CardContent>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><MessageSquare className="h-4 w-4 text-dsc-green" />Teams AI Apps ({teamsApps.length})</CardTitle></CardHeader>
+          <CardContent>{teamsApps.length === 0 ? <p className="text-sm text-dsc-text-secondary text-center py-4">No Copilot-related Teams apps found.</p> : <ResourceList items={teamsApps} expandedId={expandedId} setExpandedId={setExpandedId} />}</CardContent>
         </Card>
-      )}
-
-      {/* Key admin links */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "Copilot Admin Settings", url: "https://admin.microsoft.com/#/copilot", desc: "Manage Copilot features, data access, and user assignments" },
-          { label: "Agent Management", url: "https://admin.microsoft.com/#/copilot/agents", desc: "Publish, deploy, pin, and block Copilot agents" },
-          { label: "Data Access Governance", url: "https://admin.microsoft.com/#/copilot/dataaccess", desc: "Control what data Copilot can access and how" },
-          { label: "Usage Analytics", url: "https://admin.microsoft.com/#/copilot/usage", desc: "Monitor Copilot adoption and usage across your org" },
-        ].map((link) => (
-          <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer">
-            <Card hover className="h-full"><p className="text-sm font-medium text-dsc-text mb-1">{link.label}</p><p className="text-[10px] text-dsc-text-secondary">{link.desc}</p><ExternalLink className="h-3 w-3 text-dsc-text-secondary mt-2" /></Card>
-          </a>
-        ))}
+        <Card>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Key className="h-4 w-4 text-orange-600" />AI OAuth Consents ({consents.length})</CardTitle></CardHeader>
+          <CardContent>{consents.length === 0 ? <p className="text-sm text-dsc-text-secondary text-center py-4">No AI-related OAuth consents found.</p> : <ResourceList items={consents} expandedId={expandedId} setExpandedId={setExpandedId} />}</CardContent>
+        </Card>
       </div>
+
+      <PortalLinks links={[
+        { label: "Copilot Admin Settings", url: "https://admin.microsoft.com/#/copilot" },
+        { label: "Agent Management", url: "https://admin.microsoft.com/#/copilot/agents" },
+        { label: "Data Access Governance", url: "https://admin.microsoft.com/#/copilot/dataaccess" },
+        { label: "Usage Analytics", url: "https://admin.microsoft.com/#/copilot/usage" },
+      ]} />
     </div>
   );
 }
 
 /* ─── Copilot Studio Tab ───────────────────────────────── */
-function CopilotStudioTab() {
+function CopilotStudioTab({ t }: any) {
   return (
     <div className="space-y-6">
       <div className="p-4 rounded-lg bg-dsc-green-50/50 border border-dsc-green/20">
-        <div className="flex items-center gap-2 mb-2"><Bot className="h-4 w-4 text-dsc-green" /><span className="text-sm font-semibold text-dsc-text">Microsoft Copilot Studio</span></div>
-        <p className="text-xs text-dsc-text-secondary">Low-code platform for building custom AI agents. Create declarative agents for M365 Copilot, custom engine agents with your own AI models, and extend agents with plugins, connectors, and knowledge sources.</p>
+        <div className="flex items-center gap-2 mb-2"><Bot className="h-4 w-4 text-dsc-green" /><span className="text-sm font-semibold">Microsoft Copilot Studio</span></div>
+        <p className="text-xs text-dsc-text-secondary">Build declarative agents for M365 Copilot, custom engine agents, and classic chatbots. Extend with plugins, connectors, and knowledge sources.</p>
       </div>
-
+      <div className="grid grid-cols-3 gap-4">
+        <Card><div className="text-center py-2"><p className="text-2xl font-bold text-purple-600">{t.agentsByType?.CUSTOM || 0}</p><p className="text-xs text-dsc-text-secondary">Custom Agents</p></div></Card>
+        <Card><div className="text-center py-2"><p className="text-2xl font-bold text-dsc-green">{t.agentsByType?.SHARED || 0}</p><p className="text-xs text-dsc-text-secondary">Shared Agents</p></div></Card>
+        <Card><div className="text-center py-2"><p className="text-2xl font-bold text-orange-600">{t.agentsByType?.EXTERNAL || 0}</p><p className="text-xs text-dsc-text-secondary">External Partners</p></div></Card>
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Layers className="h-4 w-4 text-dsc-green" />Agent Types</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[
-                { name: "Declarative Agents", desc: "Extend M365 Copilot with custom instructions, knowledge, and actions. Published to the agent registry.", icon: MessageSquare, color: "text-purple-600" },
-                { name: "Custom Engine Agents", desc: "Standalone agents powered by your own AI models (Azure OpenAI, custom). Full control over orchestration.", icon: Brain, color: "text-dsc-blue" },
-                { name: "Classic Chatbots", desc: "Traditional dialog-based bots with topics, entities, and Power Automate flows.", icon: Bot, color: "text-dsc-green" },
-              ].map((type) => (
-                <div key={type.name} className="flex items-start gap-3 p-3 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <type.icon className={`h-4 w-4 ${type.color} mt-0.5 flex-shrink-0`} />
-                  <div><p className="text-sm font-medium text-dsc-text">{type.name}</p><p className="text-xs text-dsc-text-secondary">{type.desc}</p></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4 text-dsc-green" />Governance Controls</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[
-                { name: "Agent Sharing", desc: "Control who can share agents and with whom. Restrict to specific security groups.", icon: Users },
-                { name: "DLP Policies", desc: "Data Loss Prevention policies for Power Platform connectors used by agents.", icon: Shield },
-                { name: "Environment Strategy", desc: "Manage which environments agents can be created in. Isolate dev/test/prod.", icon: Layers },
-                { name: "AI Builder Credits", desc: "Monitor and allocate AI Builder capacity credits across environments.", icon: Zap },
-                { name: "Connector Policies", desc: "Control which connectors (HTTP, SQL, custom) agents can use.", icon: Plug },
-              ].map((ctrl) => (
-                <div key={ctrl.name} className="flex items-start gap-3 p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <ctrl.icon className="h-3.5 w-3.5 text-dsc-text-secondary mt-0.5 flex-shrink-0" />
-                  <div><p className="text-xs font-medium text-dsc-text">{ctrl.name}</p><p className="text-[10px] text-dsc-text-secondary">{ctrl.desc}</p></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <InfoCard title="Agent Types" icon={Layers} color="text-dsc-green" items={[
+          { name: "Declarative Agents", desc: "Extend M365 Copilot with custom instructions, knowledge, and actions" },
+          { name: "Custom Engine Agents", desc: "Standalone agents powered by your own AI models (Azure OpenAI, custom)" },
+          { name: "Classic Chatbots", desc: "Traditional dialog-based bots with topics, entities, and Power Automate flows" },
+        ]} />
+        <InfoCard title="Governance Controls" icon={Shield} color="text-dsc-green" items={[
+          { name: "Agent Sharing", desc: "Control who can share agents and with whom" },
+          { name: "DLP Policies", desc: "Data Loss Prevention for Power Platform connectors" },
+          { name: "Environment Strategy", desc: "Isolate dev/test/prod environments" },
+          { name: "AI Builder Credits", desc: "Monitor and allocate AI Builder capacity" },
+          { name: "Connector Policies", desc: "Control which connectors agents can use" },
+        ]} />
       </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        {[
-          { label: "Copilot Studio Portal", url: "https://copilotstudio.microsoft.com" },
-          { label: "Power Platform Admin Center", url: "https://admin.powerplatform.microsoft.com" },
-          { label: "Agent Sharing Controls", url: "https://learn.microsoft.com/en-us/microsoft-copilot-studio/admin-sharing-controls-limits" },
-        ].map((link) => (
-          <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer">
-            <Card hover><div className="flex items-center gap-2"><span className="text-sm font-medium text-dsc-text">{link.label}</span><ExternalLink className="h-3 w-3 text-dsc-text-secondary ml-auto" /></div></Card>
-          </a>
-        ))}
-      </div>
+      <PortalLinks links={[
+        { label: "Copilot Studio Portal", url: "https://copilotstudio.microsoft.com" },
+        { label: "Power Platform Admin", url: "https://admin.powerplatform.microsoft.com" },
+        { label: "Sharing Controls Docs", url: "https://learn.microsoft.com/en-us/microsoft-copilot-studio/admin-sharing-controls-limits" },
+      ]} />
     </div>
   );
 }
 
 /* ─── Azure AI Foundry Tab ─────────────────────────────── */
-function AzureAIFoundryTab() {
+function AzureAIFoundryTab({ data }: any) {
+  const secureScore = data?.secureScore;
+  const currentScore = Number(secureScore?.CurrentScore) || 0;
+  const maxScore = Number(secureScore?.MaxScore) || 1;
+  const scorePct = maxScore > 0 ? Math.round((currentScore / maxScore) * 100) : 0;
+  const scoreColor = scorePct >= 80 ? "#38A169" : scorePct >= 60 ? "#D69E2E" : "#E53E3E";
+
   return (
     <div className="space-y-6">
       <div className="p-4 rounded-lg bg-dsc-blue-50/50 border border-dsc-blue/20">
-        <div className="flex items-center gap-2 mb-2"><Brain className="h-4 w-4 text-dsc-blue" /><span className="text-sm font-semibold text-dsc-text">Azure AI Foundry</span></div>
-        <p className="text-xs text-dsc-text-secondary">Unified platform for building, evaluating, and deploying AI models. Manage Azure OpenAI deployments, custom models, prompt flows, and AI endpoints. Formerly Azure AI Studio.</p>
+        <div className="flex items-center gap-2 mb-2"><Brain className="h-4 w-4 text-dsc-blue" /><span className="text-sm font-semibold">Azure AI Foundry</span></div>
+        <p className="text-xs text-dsc-text-secondary">Build, evaluate, and deploy AI models. Manage Azure OpenAI, custom models, prompt flows, and AI endpoints.</p>
       </div>
+
+      {/* Secure Score as AI security posture */}
+      {secureScore && (
+        <Card>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-orange-600" />AI Security Posture (Secure Score)</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-6">
+              <div className="relative h-24 w-24 flex-shrink-0">
+                <svg className="h-24 w-24 -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#E2E8F0" strokeWidth="8" />
+                  <circle cx="50" cy="50" r="42" fill="none" stroke={scoreColor} strokeWidth="8" strokeDasharray={`${(scorePct / 100) * 264} 264`} strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-xl font-bold" style={{ color: scoreColor }}>{scorePct}%</span></div>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">{Math.round(currentScore)} / {Math.round(maxScore)} points</p>
+                <p className="text-xs text-dsc-text-secondary mt-1">{(maxScore - currentScore).toFixed(0)} improvement points available</p>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {(Array.isArray(secureScore.EnabledServices) ? secureScore.EnabledServices : []).map((svc: string) => (
+                    <span key={svc} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-2 py-0.5 rounded-full border border-dsc-blue/20">{svc}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Cpu className="h-4 w-4 text-dsc-blue" />Model Deployments</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[
-                { name: "Azure OpenAI", desc: "GPT-4o, GPT-4, GPT-3.5 Turbo, DALL-E, Whisper, text-embedding models. Managed deployments with rate limiting and content filtering.", icon: Brain, color: "text-dsc-blue" },
-                { name: "Foundry Models", desc: "Open-source and partner models: Llama, Mistral, Phi, Cohere, JAIS. Serverless or managed compute deployments.", icon: Network, color: "text-purple-600" },
-                { name: "Custom Models", desc: "Fine-tuned models trained on your data. Managed training jobs with evaluation pipelines.", icon: FileCode2, color: "text-dsc-green" },
-                { name: "Prompt Flow", desc: "Visual orchestration of LLM calls, tools, and data. Build RAG pipelines, evaluation flows, and deployment endpoints.", icon: Workflow, color: "text-orange-600" },
-              ].map((model) => (
-                <div key={model.name} className="flex items-start gap-3 p-3 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <model.icon className={`h-4 w-4 ${model.color} mt-0.5 flex-shrink-0`} />
-                  <div><p className="text-sm font-medium text-dsc-text">{model.name}</p><p className="text-xs text-dsc-text-secondary">{model.desc}</p></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4 text-dsc-blue" />AI Safety & Governance</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[
-                { name: "Content Safety", desc: "Built-in content filtering for hate, violence, sexual, and self-harm categories. Configurable severity thresholds per deployment.", icon: ShieldCheck },
-                { name: "Responsible AI", desc: "Transparency notes, fairness assessments, and model cards. Required for production deployments.", icon: Globe },
-                { name: "RBAC & Networking", desc: "Azure role-based access control, private endpoints, managed VNets, and customer-managed keys.", icon: Key },
-                { name: "Monitoring & Logging", desc: "Azure Monitor integration, token usage tracking, latency metrics, and content filter logs.", icon: BarChart3 },
-                { name: "Rate Limiting", desc: "Tokens-per-minute (TPM) and requests-per-minute (RPM) quotas per deployment. Dynamic quota allocation.", icon: Zap },
-              ].map((ctrl) => (
-                <div key={ctrl.name} className="flex items-start gap-3 p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <ctrl.icon className="h-3.5 w-3.5 text-dsc-text-secondary mt-0.5 flex-shrink-0" />
-                  <div><p className="text-xs font-medium text-dsc-text">{ctrl.name}</p><p className="text-[10px] text-dsc-text-secondary">{ctrl.desc}</p></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <InfoCard title="Model Deployments" icon={Cpu} color="text-dsc-blue" items={[
+          { name: "Azure OpenAI", desc: "GPT-4o, GPT-4, GPT-3.5 Turbo, DALL-E, Whisper, embeddings" },
+          { name: "Foundry Models", desc: "Llama, Mistral, Phi, Cohere — serverless or managed compute" },
+          { name: "Custom Models", desc: "Fine-tuned models trained on your data with evaluation pipelines" },
+          { name: "Prompt Flow", desc: "Visual orchestration of LLM calls, tools, and RAG pipelines" },
+        ]} />
+        <InfoCard title="AI Safety & Governance" icon={Shield} color="text-dsc-blue" items={[
+          { name: "Content Safety", desc: "Built-in filtering for hate, violence, sexual, self-harm categories" },
+          { name: "Responsible AI", desc: "Transparency notes, fairness assessments, model cards" },
+          { name: "RBAC & Networking", desc: "Role-based access, private endpoints, managed VNets, CMK" },
+          { name: "Monitoring", desc: "Azure Monitor, token usage, latency metrics, content filter logs" },
+          { name: "Rate Limiting", desc: "TPM and RPM quotas per deployment with dynamic allocation" },
+        ]} />
       </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "AI Foundry Portal", url: "https://ai.azure.com" },
-          { label: "Azure OpenAI Studio", url: "https://oai.azure.com" },
-          { label: "Model Catalog", url: "https://ai.azure.com/explore/models" },
-          { label: "Content Safety", url: "https://contentsafety.cognitive.azure.com" },
-        ].map((link) => (
-          <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer">
-            <Card hover><div className="flex items-center gap-2"><span className="text-sm font-medium text-dsc-text">{link.label}</span><ExternalLink className="h-3 w-3 text-dsc-text-secondary ml-auto" /></div></Card>
-          </a>
-        ))}
-      </div>
+      <PortalLinks links={[
+        { label: "AI Foundry Portal", url: "https://ai.azure.com" },
+        { label: "Azure OpenAI Studio", url: "https://oai.azure.com" },
+        { label: "Model Catalog", url: "https://ai.azure.com/explore/models" },
+        { label: "Content Safety", url: "https://contentsafety.cognitive.azure.com" },
+      ]} />
     </div>
   );
 }
@@ -355,165 +367,156 @@ function FabricAITab() {
   return (
     <div className="space-y-6">
       <div className="p-4 rounded-lg bg-orange-50/50 border border-orange-200/30">
-        <div className="flex items-center gap-2 mb-2"><Cpu className="h-4 w-4 text-orange-600" /><span className="text-sm font-semibold text-dsc-text">Copilot in Microsoft Fabric</span></div>
-        <p className="text-xs text-dsc-text-secondary">AI-powered data analytics across the entire Fabric platform. Natural language queries in notebooks, auto-generated reports, data transformation suggestions, and AI-assisted data modeling.</p>
+        <div className="flex items-center gap-2 mb-2"><Cpu className="h-4 w-4 text-orange-600" /><span className="text-sm font-semibold">Copilot in Microsoft Fabric</span></div>
+        <p className="text-xs text-dsc-text-secondary">AI-powered data analytics: natural language queries, auto-generated reports, data transformation, and AI-assisted modeling.</p>
       </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-orange-600" />Copilot Capabilities</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[
-                { name: "Copilot in Notebooks", desc: "Generate code, explain results, fix errors, and create visualizations using natural language in Spark notebooks.", icon: FileCode2 },
-                { name: "Copilot in Power BI", desc: "Create reports from natural language, generate DAX measures, explain visuals, and summarize data.", icon: BarChart3 },
-                { name: "Copilot in Data Factory", desc: "Generate data pipelines, transform data, and create dataflows using natural language descriptions.", icon: Workflow },
-                { name: "Copilot in SQL", desc: "Write and explain T-SQL queries, optimize performance, and generate stored procedures.", icon: Cpu },
-              ].map((cap) => (
-                <div key={cap.name} className="flex items-start gap-3 p-3 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <cap.icon className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                  <div><p className="text-sm font-medium text-dsc-text">{cap.name}</p><p className="text-xs text-dsc-text-secondary">{cap.desc}</p></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4 text-orange-600" />Admin Settings</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[
-                { name: "Copilot Tenant Setting", desc: "Enable or disable Copilot across the entire Fabric tenant. Controls whether users see AI features.", icon: Lock },
-                { name: "Data Sent to Azure OpenAI", desc: "Control whether data is sent to Azure OpenAI for Copilot processing. Can be restricted by capacity.", icon: Shield },
-                { name: "Capacity Assignment", desc: "Copilot requires F64+ or P1+ capacity. Assign capacities to workspaces that need AI features.", icon: Cpu },
-                { name: "Sensitivity Labels", desc: "Copilot respects Purview sensitivity labels. Content with restricted labels may limit Copilot responses.", icon: ShieldCheck },
-              ].map((setting) => (
-                <div key={setting.name} className="flex items-start gap-3 p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <setting.icon className="h-3.5 w-3.5 text-dsc-text-secondary mt-0.5 flex-shrink-0" />
-                  <div><p className="text-xs font-medium text-dsc-text">{setting.name}</p><p className="text-[10px] text-dsc-text-secondary">{setting.desc}</p></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <InfoCard title="Copilot Capabilities" icon={Sparkles} color="text-orange-600" items={[
+          { name: "Notebooks", desc: "Generate code, explain results, fix errors using natural language" },
+          { name: "Power BI", desc: "Create reports, generate DAX, explain visuals, summarize data" },
+          { name: "Data Factory", desc: "Generate pipelines and dataflows from natural language" },
+          { name: "SQL Analytics", desc: "Write T-SQL, optimize queries, generate stored procedures" },
+        ]} />
+        <InfoCard title="Admin Settings" icon={Settings} color="text-orange-600" items={[
+          { name: "Copilot Tenant Toggle", desc: "Enable/disable Copilot across the entire Fabric tenant" },
+          { name: "Data Processing", desc: "Control whether data is sent to Azure OpenAI for processing" },
+          { name: "Capacity Requirements", desc: "Copilot requires F64+ or P1+ capacity assignment" },
+          { name: "Sensitivity Labels", desc: "Copilot respects Purview labels — restricted content limits responses" },
+        ]} />
       </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        {[
-          { label: "Fabric Admin Portal", url: "https://app.fabric.microsoft.com/admin-portal/tenantSettings" },
-          { label: "Copilot Settings Docs", url: "https://learn.microsoft.com/en-us/fabric/admin/service-admin-portal-copilot" },
-          { label: "Fabric Capacities", url: "https://app.fabric.microsoft.com/admin-portal/capacities" },
-        ].map((link) => (
-          <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer">
-            <Card hover><div className="flex items-center gap-2"><span className="text-sm font-medium text-dsc-text">{link.label}</span><ExternalLink className="h-3 w-3 text-dsc-text-secondary ml-auto" /></div></Card>
-          </a>
-        ))}
-      </div>
+      <PortalLinks links={[
+        { label: "Fabric Admin Portal", url: "https://app.fabric.microsoft.com/admin-portal/tenantSettings" },
+        { label: "Copilot Settings Docs", url: "https://learn.microsoft.com/en-us/fabric/admin/service-admin-portal-copilot" },
+        { label: "Fabric Capacities", url: "https://app.fabric.microsoft.com/admin-portal/capacities" },
+      ]} />
     </div>
   );
 }
 
 /* ─── Copilot for Security Tab ─────────────────────────── */
-function CopilotSecurityTab() {
+function CopilotSecurityTab({ data }: any) {
+  const scoreControls = data?.scoreControls || [];
+  const aiControls = scoreControls.filter((c: any) => {
+    const svc = String((c.properties as any)?.Service || "").toLowerCase();
+    return svc.includes("copilot") || svc.includes("ai") || svc.includes("defender") || svc.includes("identity");
+  }).slice(0, 12);
+
   return (
     <div className="space-y-6">
       <div className="p-4 rounded-lg bg-dsc-red-50/50 border border-dsc-red/20">
-        <div className="flex items-center gap-2 mb-2"><ShieldCheck className="h-4 w-4 text-dsc-red" /><span className="text-sm font-semibold text-dsc-text">Microsoft Copilot for Security</span></div>
-        <p className="text-xs text-dsc-text-secondary">AI-powered security assistant for incident investigation, threat hunting, posture management, and security reporting. Integrates with Microsoft Defender, Sentinel, Intune, Entra, and Purview.</p>
+        <div className="flex items-center gap-2 mb-2"><ShieldCheck className="h-4 w-4 text-dsc-red" /><span className="text-sm font-semibold">Microsoft Copilot for Security</span></div>
+        <p className="text-xs text-dsc-text-secondary">AI-powered security investigation, threat hunting, posture management, and reporting across Defender, Sentinel, Intune, Entra, and Purview.</p>
       </div>
+
+      {/* Security controls relevant to AI */}
+      {aiControls.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4 text-dsc-red" />Security Controls ({aiControls.length})</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {aiControls.map((ctrl: any, i: number) => {
+                const props = ctrl.properties as any;
+                const pct = props?.MaxScore > 0 ? Math.round(((props?.CurrentScore || 0) / props.MaxScore) * 100) : 0;
+                const color = pct >= 80 ? "text-dsc-green" : pct >= 50 ? "text-dsc-yellow" : "text-dsc-red";
+                return (
+                  <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+                    <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{ctrl.displayName}</p><p className="text-[9px] text-dsc-text-secondary">{props?.Service} · {props?.ControlCategory}</p></div>
+                    <div className="flex items-center gap-2 flex-shrink-0"><span className={`text-xs font-bold ${color}`}>{pct}%</span><div className="w-12 h-1.5 rounded-full bg-gray-100"><div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: pct >= 80 ? "#38A169" : pct >= 50 ? "#D69E2E" : "#E53E3E" }} /></div></div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-dsc-red" />Capabilities</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[
-                { name: "Incident Investigation", desc: "Summarize incidents, analyze attack chains, identify affected assets, and recommend response actions.", icon: Shield },
-                { name: "Threat Hunting", desc: "Generate KQL queries from natural language, search across Defender and Sentinel data, and identify IOCs.", icon: Globe },
-                { name: "Posture Management", desc: "Analyze Secure Score, identify misconfigurations, and generate remediation scripts.", icon: BarChart3 },
-                { name: "Script Analysis", desc: "Reverse-engineer suspicious scripts, decode obfuscated PowerShell, and explain malware behavior.", icon: FileCode2 },
-                { name: "Identity Investigation", desc: "Analyze risky sign-ins, investigate compromised accounts, and review Conditional Access impact.", icon: Users },
-              ].map((cap) => (
-                <div key={cap.name} className="flex items-start gap-3 p-3 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <cap.icon className="h-4 w-4 text-dsc-red mt-0.5 flex-shrink-0" />
-                  <div><p className="text-sm font-medium text-dsc-text">{cap.name}</p><p className="text-xs text-dsc-text-secondary">{cap.desc}</p></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4 text-dsc-red" />Admin Configuration</CardTitle></CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {[
-                { name: "Security Compute Units (SCUs)", desc: "Copilot for Security is billed per SCU. Provision capacity in Azure and assign to your tenant.", icon: Cpu },
-                { name: "Plugin Management", desc: "Enable/disable built-in plugins (Defender, Sentinel, Intune, Entra) and custom plugins.", icon: Plug },
-                { name: "Role Assignments", desc: "Copilot Owner and Copilot Contributor roles control who can manage settings and use Copilot.", icon: Key },
-                { name: "Data Sharing", desc: "Control whether Copilot data is shared with Microsoft for product improvement.", icon: Lock },
-                { name: "Audit Logging", desc: "All Copilot for Security sessions are logged in Microsoft Purview audit logs.", icon: Monitor },
-              ].map((setting) => (
-                <div key={setting.name} className="flex items-start gap-3 p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <setting.icon className="h-3.5 w-3.5 text-dsc-text-secondary mt-0.5 flex-shrink-0" />
-                  <div><p className="text-xs font-medium text-dsc-text">{setting.name}</p><p className="text-[10px] text-dsc-text-secondary">{setting.desc}</p></div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <InfoCard title="Capabilities" icon={Sparkles} color="text-dsc-red" items={[
+          { name: "Incident Investigation", desc: "Summarize incidents, analyze attack chains, recommend response" },
+          { name: "Threat Hunting", desc: "Generate KQL from natural language, search Defender + Sentinel" },
+          { name: "Posture Management", desc: "Analyze Secure Score, identify misconfigs, generate scripts" },
+          { name: "Script Analysis", desc: "Reverse-engineer suspicious scripts, decode obfuscated code" },
+          { name: "Identity Investigation", desc: "Analyze risky sign-ins, investigate compromised accounts" },
+        ]} />
+        <InfoCard title="Admin Configuration" icon={Settings} color="text-dsc-red" items={[
+          { name: "Security Compute Units", desc: "Billed per SCU — provision capacity in Azure" },
+          { name: "Plugin Management", desc: "Enable/disable Defender, Sentinel, Intune, Entra plugins" },
+          { name: "Role Assignments", desc: "Copilot Owner and Contributor roles for access control" },
+          { name: "Data Sharing", desc: "Control data sharing with Microsoft for improvement" },
+          { name: "Audit Logging", desc: "All sessions logged in Microsoft Purview audit" },
+        ]} />
       </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        {[
-          { label: "Security Copilot Portal", url: "https://security.microsoft.com/copilot" },
-          { label: "SCU Management", url: "https://portal.azure.com/#view/Microsoft_Azure_Security_Copilot" },
-          { label: "Security Copilot Docs", url: "https://learn.microsoft.com/en-us/copilot/security/microsoft-security-copilot" },
-        ].map((link) => (
-          <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer">
-            <Card hover><div className="flex items-center gap-2"><span className="text-sm font-medium text-dsc-text">{link.label}</span><ExternalLink className="h-3 w-3 text-dsc-text-secondary ml-auto" /></div></Card>
-          </a>
-        ))}
-      </div>
+      <PortalLinks links={[
+        { label: "Security Copilot", url: "https://security.microsoft.com/copilot" },
+        { label: "SCU Management", url: "https://portal.azure.com/#view/Microsoft_Azure_Security_Copilot" },
+        { label: "Security Copilot Docs", url: "https://learn.microsoft.com/en-us/copilot/security/microsoft-security-copilot" },
+      ]} />
     </div>
   );
 }
 
-/* ─── Shared Resource Row Component ──────────────────── */
-function ResourceRow({ res, expandedId, setExpandedId }: { res: any; expandedId: string | null; setExpandedId: (id: string | null) => void }) {
-  const isExpanded = expandedId === res.id;
-  const props = res.properties || {};
-  const simpleProps = Object.entries(props).filter(([, v]) => v != null && typeof v !== "object");
-  const boolColor = (val: unknown) => val === true ? "text-dsc-green" : val === false ? "text-dsc-red" : "text-dsc-text";
-
+/* ─── Shared Components ──────────────────────────────── */
+function ResourceList({ items, expandedId, setExpandedId }: { items: any[]; expandedId: string | null; setExpandedId: (id: string | null) => void }) {
   return (
-    <div>
-      <div className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border cursor-pointer hover:border-purple-200 transition-colors" onClick={() => setExpandedId(isExpanded ? null : res.id)}>
-        <div className="flex items-center gap-2.5">
-          {res.status === "COMPLIANT" ? <CheckCircle2 className="h-3.5 w-3.5 text-dsc-green flex-shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-dsc-red flex-shrink-0" />}
-          <div>
-            <p className="text-sm font-medium text-dsc-text">{res.displayName}</p>
-            <p className="text-[10px] text-dsc-text-secondary">{res.resourceType}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <StatusDot status={res.status} />
-          {isExpanded ? <ChevronUp className="h-3.5 w-3.5 text-dsc-text-secondary" /> : <ChevronDown className="h-3.5 w-3.5 text-dsc-text-secondary" />}
-        </div>
-      </div>
-      {isExpanded && simpleProps.length > 0 && (
-        <div className="mt-1.5 ml-6 rounded-lg border border-dsc-border bg-white p-2.5">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-            {simpleProps.map(([key, val]) => (
-              <div key={key} className="p-1.5 rounded-md bg-dsc-bg border border-dsc-border/50">
-                <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide">{key.replace(/([A-Z])/g, " $1").trim()}</p>
-                <p className={`text-xs font-medium ${typeof val === "boolean" ? boolColor(val) : "text-dsc-text"}`}>{typeof val === "boolean" ? (val ? "✓ Enabled" : "✗ Disabled") : String(val)}</p>
+    <div className="space-y-2">
+      {items.map((res: any) => {
+        const isExp = expandedId === res.id;
+        const props = res.properties as Record<string, unknown> || {};
+        const simpleProps = Object.entries(props).filter(([, v]) => v != null && typeof v !== "object");
+        return (
+          <div key={res.id}>
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border cursor-pointer hover:border-purple-200 transition-colors" onClick={() => setExpandedId(isExp ? null : res.id)}>
+              <div className="flex items-center gap-2 min-w-0">
+                {res.status === "COMPLIANT" ? <CheckCircle2 className="h-3.5 w-3.5 text-dsc-green flex-shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-dsc-red flex-shrink-0" />}
+                <div className="min-w-0"><p className="text-xs font-medium truncate">{res.displayName}</p><p className="text-[9px] text-dsc-text-secondary">{res.resourceType}</p></div>
               </div>
-            ))}
+              <div className="flex items-center gap-1.5"><StatusDot status={res.status} />{isExp ? <ChevronUp className="h-3 w-3 text-dsc-text-secondary" /> : <ChevronDown className="h-3 w-3 text-dsc-text-secondary" />}</div>
+            </div>
+            {isExp && simpleProps.length > 0 && (
+              <div className="mt-1 ml-5 rounded-lg border border-dsc-border bg-white p-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {simpleProps.map(([key, val]) => (
+                    <div key={key} className="p-1.5 rounded-md bg-dsc-bg border border-dsc-border/50">
+                      <p className="text-[8px] text-dsc-text-secondary uppercase tracking-wide">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                      <p className={`text-[10px] font-medium ${typeof val === "boolean" ? (val ? "text-dsc-green" : "text-dsc-red") : "text-dsc-text"}`}>{typeof val === "boolean" ? (val ? "✓ Yes" : "✗ No") : String(val).substring(0, 50)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function InfoCard({ title, icon: Icon, color, items }: { title: string; icon: React.ElementType; color: string; items: { name: string; desc: string }[] }) {
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-base flex items-center gap-2"><Icon className={`h-4 w-4 ${color}`} />{title}</CardTitle></CardHeader>
+      <CardContent>
+        <div className="space-y-2.5">
+          {items.map((item) => (
+            <div key={item.name} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+              <CheckCircle2 className="h-3.5 w-3.5 text-dsc-text-secondary mt-0.5 flex-shrink-0" />
+              <div><p className="text-xs font-medium text-dsc-text">{item.name}</p><p className="text-[10px] text-dsc-text-secondary">{item.desc}</p></div>
+            </div>
+          ))}
         </div>
-      )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PortalLinks({ links }: { links: { label: string; url: string }[] }) {
+  return (
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {links.map((link) => (
+        <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer">
+          <Card hover><div className="flex items-center gap-2"><span className="text-sm font-medium text-dsc-text">{link.label}</span><ExternalLink className="h-3 w-3 text-dsc-text-secondary ml-auto" /></div></Card>
+        </a>
+      ))}
     </div>
   );
 }

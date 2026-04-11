@@ -696,93 +696,85 @@ async function syncAICopilotSettings(token: string, tenantId: string): Promise<S
   }> = [];
 
   // ─── Copilot Limited Mode ─────────────────────────────
-  // GET /copilot/admin/settings/limitedMode (v1.0 + beta)
-  const limitedMode = await tryGraphGet(token, "/copilot/admin/settings/limitedMode");
-  if (!limitedMode.data) {
-    // Try beta
-    const limitedModeBeta = await tryGraphGet(token, "/copilot/admin/settings/limitedMode", true);
-    if (limitedModeBeta.data) {
-      const lm = limitedModeBeta.data as any;
-      resources.push({
-        workload: "AAD", resourceType: "CopilotLimitedMode",
-        displayName: "Copilot Limited Mode",
-        properties: { IsEnabledForGroup: lm.isEnabledForGroup, GroupId: lm.groupId },
-        status: "COMPLIANT", differingProperties: [],
-      });
-    }
-  } else {
-    const lm = limitedMode.data as any;
-    resources.push({
-      workload: "AAD", resourceType: "CopilotLimitedMode",
-      displayName: "Copilot Limited Mode",
-      properties: { IsEnabledForGroup: lm.isEnabledForGroup, GroupId: lm.groupId },
-      status: "COMPLIANT", differingProperties: [],
-    });
-  }
-
-  // ─── Copilot Pinned Agents ────────────────────────────
-  const pinnedAgents = await tryGraphGet(token, "/copilot/admin/settings/pinnedAgents", true);
-  if (pinnedAgents.data) {
-    const pa = pinnedAgents.data as any;
-    const agents = pa.value || (pa.pinnedAgents ? [pa] : []);
-    for (const agent of agents) {
-      resources.push({
-        workload: "AAD", resourceType: "CopilotPinnedAgent",
-        displayName: agent.displayName || agent.agentId || "Pinned Agent",
-        properties: { AgentId: agent.agentId, DisplayName: agent.displayName, Scope: agent.scope, ...agent },
-        status: "COMPLIANT", differingProperties: [],
-      });
+  for (const beta of [false, true]) {
+    const lm = await tryGraphGet(token, "/copilot/admin/settings/limitedMode", beta);
+    if (lm.data) {
+      const d = lm.data as any;
+      resources.push({ workload: "AAD", resourceType: "CopilotLimitedMode", displayName: "Copilot Limited Mode", properties: { IsEnabledForGroup: d.isEnabledForGroup, GroupId: d.groupId }, status: "COMPLIANT", differingProperties: [] });
+      break;
     }
   }
 
-  // ─── Graph Connectors (Copilot data sources) ──────────
+  // ─── Graph Connectors (detailed) ──────────────────────
   const connectors = await tryGraphGet(token, "/external/connections");
   if (connectors.data) {
     for (const conn of ((connectors.data as any).value || [])) {
+      // Get schema for each connector
+      const schema = await tryGraphGet(token, `/external/connections/${conn.id}/schema`);
+      const schemaProps = schema.data ? ((schema.data as any).properties || []).length : 0;
+      const items = await tryGraphGet(token, `/external/connections/${conn.id}/items?$top=0&$count=true`);
+      const itemCount = items.data ? ((items.data as any)["@odata.count"] ?? "unknown") : "unknown";
+
       resources.push({
-        workload: "AAD", resourceType: "CopilotGraphConnector",
-        displayName: conn.name || conn.id || "Graph Connector",
-        properties: { Id: conn.id, Name: conn.name, Description: conn.description, State: conn.state, ConnectorId: conn.connectorId },
-        status: conn.state === "ready" ? "COMPLIANT" : "DRIFTED",
-        differingProperties: conn.state !== "ready" ? ["ConnectorState"] : [],
+        workload: "AAD", resourceType: "CopilotGraphConnector", displayName: conn.name || conn.id,
+        properties: { Id: conn.id, Name: conn.name, Description: conn.description, State: conn.state, ConnectorId: conn.connectorId, SchemaProperties: schemaProps, ItemCount: itemCount, ActivitySettings: conn.activitySettings, SearchSettings: conn.searchSettings, Configuration: conn.configuration },
+        status: conn.state === "ready" ? "COMPLIANT" : "DRIFTED", differingProperties: conn.state !== "ready" ? ["ConnectorState"] : [],
       });
     }
   }
 
-  // ─── Service Principals (AI/Copilot related) ──────────
-  const aiServicePrincipals = await tryGraphGet(token, "/servicePrincipals?$filter=startswith(displayName,'Microsoft Copilot') or startswith(displayName,'Copilot') or startswith(displayName,'Microsoft 365 Copilot')&$top=20");
-  if (aiServicePrincipals.data) {
-    for (const sp of ((aiServicePrincipals.data as any).value || [])) {
+  // ─── Copilot Service Principals ────────────────────────
+  const spFilters = ["Microsoft Copilot", "Copilot", "Microsoft 365 Copilot", "Azure OpenAI", "AI Builder", "Power Virtual Agents"];
+  for (const filter of spFilters) {
+    const sps = await tryGraphGet(token, `/servicePrincipals?$filter=startswith(displayName,'${filter}')&$top=10&$select=id,appId,displayName,accountEnabled,servicePrincipalType,signInAudience,appOwnerOrganizationId,createdDateTime,tags`);
+    if (sps.data) {
+      for (const sp of ((sps.data as any).value || [])) {
+        // Avoid duplicates
+        if (resources.some((r) => r.resourceType === "CopilotServicePrincipal" && r.properties.AppId === sp.appId)) continue;
+        resources.push({
+          workload: "AAD", resourceType: "CopilotServicePrincipal", displayName: sp.displayName,
+          properties: { AppId: sp.appId, DisplayName: sp.displayName, AccountEnabled: sp.accountEnabled, ServicePrincipalType: sp.servicePrincipalType, SignInAudience: sp.signInAudience, AppOwnerOrganizationId: sp.appOwnerOrganizationId, CreatedDateTime: sp.createdDateTime, Tags: sp.tags },
+          status: sp.accountEnabled ? "COMPLIANT" : "DRIFTED", differingProperties: sp.accountEnabled ? [] : ["AccountEnabled"],
+        });
+      }
+    }
+  }
+
+  // ─── Teams App Catalog (Copilot-related apps) ─────────
+  const teamsApps = await tryGraphGet(token, "/appCatalogs/teamsApps?$expand=appDefinitions&$top=50");
+  if (teamsApps.data) {
+    for (const app of ((teamsApps.data as any).value || [])) {
+      const def = app.appDefinitions?.[0];
+      const name = def?.displayName || app.displayName || "Unknown";
+      if (!name.toLowerCase().includes("copilot") && !name.toLowerCase().includes("ai") && app.distributionMethod !== "organization") continue;
       resources.push({
-        workload: "AAD", resourceType: "CopilotServicePrincipal",
-        displayName: sp.displayName || "Copilot Service",
-        properties: { AppId: sp.appId, DisplayName: sp.displayName, AccountEnabled: sp.accountEnabled, ServicePrincipalType: sp.servicePrincipalType, SignInAudience: sp.signInAudience, AppOwnerOrganizationId: sp.appOwnerOrganizationId },
-        status: sp.accountEnabled ? "COMPLIANT" : "DRIFTED",
-        differingProperties: sp.accountEnabled ? [] : ["AccountEnabled"],
+        workload: "TEAMS", resourceType: "CopilotTeamsApp", displayName: name,
+        properties: { Id: app.id, DisplayName: name, DistributionMethod: app.distributionMethod, ExternalId: app.externalId, Description: def?.shortDescription, Version: def?.version, PublishingState: def?.publishingState },
+        status: "COMPLIANT", differingProperties: [],
       });
     }
   }
 
-  // ─── AI Builder / Power Platform AI ───────────────────
-  const ppAI = await tryGraphGet(token, "/admin/powerPlatform/settings", true);
-  if (ppAI.data) {
-    const settings = ppAI.data as any;
-    resources.push({
-      workload: "PP", resourceType: "PowerPlatformAISettings",
-      displayName: "Power Platform AI Settings",
-      properties: { ...settings },
-      status: "COMPLIANT", differingProperties: [],
-    });
+  // ─── OAuth2 Permission Grants (AI app consents) ───────
+  const oauthGrants = await tryGraphGet(token, "/oauth2PermissionGrants?$filter=startswith(consentType,'AllPrincipals')&$top=50");
+  if (oauthGrants.data) {
+    for (const grant of ((oauthGrants.data as any).value || [])) {
+      // Look up the service principal to see if it's AI-related
+      const sp = await tryGraphGet(token, `/servicePrincipals/${grant.clientId}?$select=displayName`);
+      const spName = sp.data ? (sp.data as any).displayName : "";
+      if (!spName.toLowerCase().includes("copilot") && !spName.toLowerCase().includes("ai") && !spName.toLowerCase().includes("openai")) continue;
+      resources.push({
+        workload: "AAD", resourceType: "CopilotOAuthConsent", displayName: `${spName} — Consent`,
+        properties: { ClientId: grant.clientId, ServicePrincipal: spName, ConsentType: grant.consentType, Scope: grant.scope, PrincipalId: grant.principalId },
+        status: "COMPLIANT", differingProperties: [],
+      });
+    }
   }
 
   if (resources.length === 0) {
-    return {
-      success: true, count: 0,
-      reason: "No AI/Copilot settings accessible. Some endpoints require Copilot licensing or specific admin roles.",
-    };
+    return { success: true, count: 0, reason: "No AI/Copilot settings accessible with current permissions." };
   }
 
-  // Store as M365 resources under the AI-related workloads
   for (const res of resources) {
     await prisma.m365Resource.create({
       data: {

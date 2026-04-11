@@ -49,6 +49,8 @@ const SCOPES = [
   "Team.ReadBasic.All",                          // Teams list
   "TeamSettings.Read.All",                       // Teams settings per team
   "Channel.ReadBasic.All",                       // Teams channels
+  "ExternalConnection.Read.All",                 // Graph connectors
+  "AppCatalog.Read.All",                         // Teams app catalog
 ].join(" ");
 
 // ─── OAuth2 Authorization Code + PKCE ───────────────────
