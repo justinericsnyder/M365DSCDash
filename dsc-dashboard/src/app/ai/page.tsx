@@ -19,7 +19,7 @@ import Link from "next/link";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type Tab = "overview" | "copilot365" | "studio" | "foundry" | "fabric" | "security";
+type Tab = "overview" | "copilot365" | "studio" | "agents" | "foundry" | "fabric" | "security";
 
 function generateTrend(current: number, days = 14): number[] {
   const pts: number[] = [];
@@ -49,7 +49,8 @@ export default function AIGovernancePage() {
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: "overview", label: "Overview", icon: Sparkles },
     { key: "copilot365", label: "Copilot for M365", icon: MessageSquare },
-    { key: "studio", label: "Copilot Studio", icon: Bot },
+    { key: "agents", label: "Agent Registry", icon: Bot },
+    { key: "studio", label: "Copilot Studio", icon: Layers },
     { key: "foundry", label: "Azure AI Foundry", icon: Brain },
     { key: "fabric", label: "Copilot in Fabric", icon: Cpu },
     { key: "security", label: "Copilot for Security", icon: ShieldCheck },
@@ -75,6 +76,7 @@ export default function AIGovernancePage() {
 
       {tab === "overview" && <OverviewTab data={data} t={t} expandedId={expandedId} setExpandedId={setExpandedId} />}
       {tab === "copilot365" && <Copilot365Tab data={data} t={t} expandedId={expandedId} setExpandedId={setExpandedId} />}
+      {tab === "agents" && <AgentRegistryTab data={data} t={t} />}
       {tab === "studio" && <CopilotStudioTab t={t} />}
       {tab === "foundry" && <AzureAIFoundryTab data={data} />}
       {tab === "fabric" && <FabricAITab />}
@@ -317,6 +319,155 @@ function CopilotStudioTab({ t }: any) {
         { label: "Copilot Studio Portal", url: "https://copilotstudio.microsoft.com" },
         { label: "Power Platform Admin", url: "https://admin.powerplatform.microsoft.com" },
         { label: "Sharing Controls Docs", url: "https://learn.microsoft.com/en-us/microsoft-copilot-studio/admin-sharing-controls-limits" },
+      ]} />
+    </div>
+  );
+}
+
+/* ─── Agent Registry Tab ───────────────────────────────── */
+function AgentRegistryTab({ data, t }: any) {
+  const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+  const agents = data?.agents || [];
+  const deployed = agents.filter((a: any) => a.deployedTo !== "none");
+  const blocked = agents.filter((a: any) => a.isBlocked);
+  const pinned = agents.filter((a: any) => a.isPinned);
+  const risky = agents.filter((a: any) => a.riskCount > 0);
+  const ownerless = agents.filter((a: any) => a.isOwnerless);
+
+  const typeColors: Record<string, { bg: string; text: string; label: string }> = {
+    MICROSOFT: { bg: "bg-dsc-blue-50", text: "text-dsc-blue", label: "Microsoft" },
+    EXTERNAL: { bg: "bg-dsc-yellow-50", text: "text-dsc-yellow", label: "External" },
+    CUSTOM: { bg: "bg-purple-900/30", text: "text-purple-400", label: "Custom" },
+    SHARED: { bg: "bg-dsc-green-50", text: "text-dsc-green", label: "Shared" },
+  };
+
+  return (
+    <div className="space-y-6 stagger-children">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 stagger-children">
+        <MetricCard icon={Bot} label="Total Agents" value={t.agents || 0} sub={`${t.deployedAgents || 0} deployed`} color="purple" trend={generateTrend(t.agents > 0 ? 80 : 0)} />
+        <MetricCard icon={CheckCircle2} label="Deployed" value={t.deployedAgents || 0} sub={`of ${t.agents || 0}`} color="green" trend={generateTrend(t.agents > 0 ? Math.round((t.deployedAgents / t.agents) * 100) : 0)} />
+        <MetricCard icon={Sparkles} label="Pinned" value={t.pinnedAgents || 0} sub="for users" color="blue" trend={generateTrend(60)} />
+        <MetricCard icon={Shield} label="With Risks" value={t.riskyAgents || 0} sub={`${t.totalRiskCount || 0} total`} color="orange" trend={generateTrend(t.riskyAgents > 0 ? 30 : 95)} />
+        <MetricCard icon={XCircle} label="Blocked" value={t.blockedAgents || 0} sub="restricted" color="orange" trend={generateTrend(t.blockedAgents > 0 ? 20 : 98)} />
+      </div>
+
+      {/* Agent type distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="animate-gravity-in">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Bot className="h-4 w-4 text-purple-600" />Distribution</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-6">
+              <div className="relative h-24 w-24 flex-shrink-0">
+                <svg className="h-24 w-24 -rotate-90" viewBox="0 0 100 100">
+                  {(() => { const types = [{ key: "MICROSOFT", color: "#B89ADA" }, { key: "EXTERNAL", color: "#E8D07A" }, { key: "CUSTOM", color: "#7C3AED" }, { key: "SHARED", color: "#7ECC9A" }]; let offset = 0; return types.map((tp) => { const count = t.agentsByType?.[tp.key] || 0; const pct = t.agents > 0 ? (count / t.agents) * 283 : 0; const el = <circle key={tp.key} cx="50" cy="50" r="45" fill="none" stroke={tp.color} strokeWidth="8" strokeDasharray={`${pct} ${283 - pct}`} strokeDashoffset={-offset} />; offset += pct; return el; }); })()}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-lg font-bold">{t.agents || 0}</span></div>
+              </div>
+              <div className="space-y-2 flex-1">
+                {Object.entries(typeColors).map(([key, tc]) => (
+                  <div key={key} className="flex items-center gap-2"><div className={`h-2.5 w-2.5 rounded-full ${tc.bg}`} style={{ backgroundColor: key === "MICROSOFT" ? "#B89ADA" : key === "EXTERNAL" ? "#E8D07A" : key === "CUSTOM" ? "#7C3AED" : "#7ECC9A" }} /><span className="text-xs text-dsc-text-secondary flex-1">{tc.label}</span><span className="text-xs font-bold">{t.agentsByType?.[key] || 0}</span></div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Governance alerts */}
+        <Card className="animate-gravity-in">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4 text-dsc-red" />Governance</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {blocked.length > 0 && <div className="flex items-center gap-2 p-2.5 rounded-lg bg-dsc-red-50 border border-dsc-red/20"><XCircle className="h-4 w-4 text-dsc-red" /><div><p className="text-xs font-medium">{blocked.length} blocked</p><p className="text-[9px] text-dsc-text-secondary">Restricted from use</p></div></div>}
+              {risky.length > 0 && <div className="flex items-center gap-2 p-2.5 rounded-lg bg-dsc-yellow-50 border border-dsc-yellow/20"><Shield className="h-4 w-4 text-dsc-yellow" /><div><p className="text-xs font-medium">{risky.length} with risks</p><p className="text-[9px] text-dsc-text-secondary">Flagged by security</p></div></div>}
+              {ownerless.length > 0 && <div className="flex items-center gap-2 p-2.5 rounded-lg bg-dsc-yellow-50 border border-dsc-yellow/20"><Users className="h-4 w-4 text-dsc-yellow" /><div><p className="text-xs font-medium">{ownerless.length} ownerless</p><p className="text-[9px] text-dsc-text-secondary">Need ownership</p></div></div>}
+              {blocked.length === 0 && risky.length === 0 && ownerless.length === 0 && <div className="flex items-center gap-2 p-3"><CheckCircle2 className="h-4 w-4 text-dsc-green" /><span className="text-xs text-dsc-green">No governance issues</span></div>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pinned agents */}
+        <Card className="animate-gravity-in">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-dsc-blue" />Pinned Agents ({pinned.length})</CardTitle></CardHeader>
+          <CardContent>
+            {pinned.length === 0 ? <p className="text-xs text-dsc-text-secondary text-center py-3">No pinned agents</p> : (
+              <div className="space-y-2">{pinned.map((a: any) => (
+                <div key={a.id} className="flex items-center justify-between p-2 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <div className="flex items-center gap-2"><Bot className="h-3.5 w-3.5 text-dsc-blue" /><span className="text-xs font-medium truncate">{a.displayName}</span></div>
+                  <Badge variant="active">{a.pinnedScope || "all"}</Badge>
+                </div>
+              ))}</div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Agent list */}
+      <Card className="animate-gravity-in">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Bot className="h-4 w-4 text-purple-600" />All Agents ({agents.length})</CardTitle></CardHeader>
+        <CardContent>
+          {agents.length === 0 ? <p className="text-sm text-dsc-text-secondary text-center py-4">No agents synced. Click Sync Now in Settings.</p> : (
+            <div className="space-y-2">
+              {agents.map((agent: any) => {
+                const tc = typeColors[agent.type] || typeColors.EXTERNAL;
+                const isExp = expandedAgent === agent.id;
+                return (
+                  <div key={agent.id}>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border cursor-pointer hover:border-purple-600/30 transition-colors" onClick={() => setExpandedAgent(isExp ? null : agent.id)}>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Bot className={`h-4 w-4 ${tc.text} flex-shrink-0`} />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium truncate">{agent.displayName}</span>
+                            {agent.isBlocked && <Badge variant="error">Blocked</Badge>}
+                            {agent.isPinned && <Badge variant="active">Pinned</Badge>}
+                            {agent.isOwnerless && <Badge variant="drifted">Ownerless</Badge>}
+                            {agent.riskCount > 0 && <Badge variant="critical">{agent.riskCount} risks</Badge>}
+                          </div>
+                          <p className="text-[10px] text-dsc-text-secondary">{agent.publisher || agent.type}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge variant={tc.label.toLowerCase() as any}>{tc.label}</Badge>
+                        <span className="text-[10px] text-dsc-text-secondary">{agent.deployedTo !== "none" ? "Deployed" : "—"}</span>
+                        {isExp ? <ChevronUp className="h-3.5 w-3.5 text-dsc-text-secondary" /> : <ChevronDown className="h-3.5 w-3.5 text-dsc-text-secondary" />}
+                      </div>
+                    </div>
+                    {isExp && (
+                      <div className="mt-1.5 ml-7 rounded-lg border border-dsc-border bg-dsc-surface p-3 animate-slide-down">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {[
+                            { label: "Publisher", value: agent.publisher },
+                            { label: "Version", value: agent.version },
+                            { label: "Platform", value: agent.platform || "web" },
+                            { label: "Available To", value: agent.availableTo },
+                            { label: "Deployed To", value: agent.deployedTo },
+                            { label: "Owner", value: agent.ownerDisplayName },
+                          ].filter((p) => p.value).map((p) => (
+                            <div key={p.label} className="p-1.5 rounded-md bg-dsc-bg border border-dsc-border/50">
+                              <p className="text-[8px] text-dsc-text-secondary uppercase">{p.label}</p>
+                              <p className="text-[10px] font-medium">{p.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {agent.supportedHosts?.length > 0 && (
+                          <div className="mt-2"><p className="text-[8px] text-dsc-text-secondary uppercase mb-1">Supported Hosts</p><div className="flex flex-wrap gap-1">{agent.supportedHosts.map((h: string) => <span key={h} className="text-[9px] bg-dsc-blue-50 text-dsc-blue px-1.5 py-0.5 rounded-full">{h}</span>)}</div></div>
+                        )}
+                        {agent.sensitivityLabel && <p className="text-[9px] text-dsc-text-secondary mt-2">Sensitivity: <Badge variant="medium">{agent.sensitivityLabel}</Badge></p>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <PortalLinks links={[
+        { label: "Agent Management", url: "https://admin.microsoft.com/#/copilot/agents" },
+        { label: "Agent Registry Docs", url: "https://learn.microsoft.com/en-us/microsoft-365/admin/manage/agent-registry" },
+        { label: "Entra Agent ID", url: "https://learn.microsoft.com/en-us/entra/agent-id/" },
       ]} />
     </div>
   );

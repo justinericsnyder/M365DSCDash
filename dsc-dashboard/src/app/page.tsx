@@ -10,7 +10,7 @@ import { timeAgo } from "@/lib/utils";
 import {
   Server, AlertTriangle, CheckCircle2,
   Shield, Database, Cloud, Bot, ShieldCheck, Lock,
-  TrendingUp, Activity, Gauge,
+  TrendingUp, Activity, Gauge, Globe, Users, Key,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -328,6 +328,31 @@ export default function DashboardPage() {
           </Card>
         )}
       </div>
+
+      {/* ─── Tenant Live Data Overview ────────────────────── */}
+      {m365?.workloads && (
+        <Card className="animate-gravity-in">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4 text-dsc-blue" />Tenant Live Data</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 stagger-children">
+              {[
+                { label: "Auth Methods", value: Object.values(m365.workloads as Record<string, {total: number}>).reduce((s, w) => s + w.total, 0) > 0 ? (m365.workloads as any).AAD?.total || 0 : 0, icon: Shield },
+                { label: "Domains", value: m365.resourceTypes?.find((r: any) => r.type === "AADDomain")?.count || 0, icon: Globe },
+                { label: "Teams", value: m365.resourceTypes?.find((r: any) => r.type === "TeamsTeam")?.count || 0, icon: Users },
+                { label: "Sites", value: m365.resourceTypes?.find((r: any) => r.type === "SPOSite")?.count || 0, icon: Globe },
+                { label: "Secure Score", value: (() => { const ss = m365.driftedResources?.find?.((r: any) => r.resourceType === "SecureScore") || m365.resourceTypes?.find((r: any) => r.type === "SecureScore"); return ss ? "✓" : "—"; })(), icon: ShieldCheck },
+                { label: "OAuth Grants", value: m365.resourceTypes?.find((r: any) => r.type === "CopilotOAuthConsent")?.count || 0, icon: Key },
+              ].map((item, i) => (
+                <div key={i} className="text-center p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <item.icon className="h-4 w-4 text-dsc-text-secondary mx-auto mb-1" />
+                  <p className="text-lg font-bold text-dsc-text">{item.value}</p>
+                  <p className="text-[9px] text-dsc-text-secondary">{item.label}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Recent Drift */}
       {infra?.drift?.recent?.length > 0 && (
