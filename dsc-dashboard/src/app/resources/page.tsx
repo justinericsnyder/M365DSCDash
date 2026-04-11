@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Blocks, CheckCircle2, XCircle, Filter, Cloud, ShieldCheck, Server } from "lucide-react";
+import { Blocks, CheckCircle2, XCircle, Filter, Cloud, ShieldCheck, Server, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
 import Link from "next/link";
 
@@ -96,24 +96,99 @@ export default function ResourcesPage() {
                 </div>
                 <div className="space-y-1.5">
                   {group.items.map((res: any) => (
-                    <div key={res.id} className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
-                      <div className="flex items-center gap-2.5">
-                        {res.status === "COMPLIANT" ? <CheckCircle2 className="h-3.5 w-3.5 text-dsc-green flex-shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-dsc-red flex-shrink-0" />}
-                        {res.color && <div className="h-3 w-3 rounded-sm flex-shrink-0" style={{ backgroundColor: res.color }} />}
-                        <div>
-                          <p className="text-sm font-medium text-dsc-text">{res.name}</p>
-                          {res.parentName && <p className="text-xs text-dsc-text-secondary">{res.parentName}{res.workload ? ` · ${res.workload}` : ""}</p>}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {res.driftCount > 0 && <Badge variant="drifted">{res.driftCount} drift</Badge>}
-                        <span className="text-xs text-dsc-text-secondary">{timeAgo(res.lastChecked)}</span>
-                      </div>
-                    </div>
+                    <UnifiedResourceItem key={res.id} res={res} />
                   ))}
                 </div>
               </Card>
             );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Expandable Resource Item ───────────────────────── */
+function UnifiedResourceItem({ res }: { res: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const props = res.properties || {};
+  const entries = Object.entries(props).filter(([, v]) => v !== null && v !== undefined);
+  const simpleProps = entries.filter(([, v]) => typeof v !== "object");
+  const complexProps = entries.filter(([, v]) => typeof v === "object" && v !== null);
+
+  const boolColor = (val: unknown) => val === true ? "text-dsc-green" : val === false ? "text-dsc-red" : "text-dsc-text";
+
+  return (
+    <div>
+      <div
+        className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border cursor-pointer hover:border-dsc-blue/30 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2.5">
+          {res.status === "COMPLIANT" ? <CheckCircle2 className="h-3.5 w-3.5 text-dsc-green flex-shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-dsc-red flex-shrink-0" />}
+          {res.color && <div className="h-3 w-3 rounded-sm flex-shrink-0" style={{ backgroundColor: res.color }} />}
+          <div>
+            <p className="text-sm font-medium text-dsc-text">{res.name}</p>
+            {res.parentName && <p className="text-xs text-dsc-text-secondary">{res.parentName}{res.workload ? ` · ${res.workload}` : ""}</p>}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {res.driftCount > 0 && <Badge variant="drifted">{res.driftCount} drift</Badge>}
+          <span className="text-xs text-dsc-text-secondary">{timeAgo(res.lastChecked)}</span>
+          {expanded ? <ChevronUp className="h-3.5 w-3.5 text-dsc-text-secondary" /> : <ChevronDown className="h-3.5 w-3.5 text-dsc-text-secondary" />}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="mt-2 ml-6 rounded-lg border border-dsc-border bg-white p-3 space-y-3">
+          {/* Header */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded font-mono">{res.resourceType}</span>
+            <Badge variant={res.status === "COMPLIANT" ? "compliant" : "drifted"}>{res.status}</Badge>
+            {res.source && <span className="text-[10px] text-dsc-text-secondary">{res.source}</span>}
+          </div>
+
+          {/* Simple properties grid */}
+          {simpleProps.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+              {simpleProps.map(([key, val]) => (
+                <div key={key} className="p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
+                  <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                  <p className={`text-xs font-medium mt-0.5 ${typeof val === "boolean" ? boolColor(val) : "text-dsc-text"}`}>
+                    {typeof val === "boolean" ? (val ? "✓ Yes" : "✗ No") : String(val)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Complex properties */}
+          {complexProps.map(([key, val]) => {
+            if (Array.isArray(val) && val.every((v) => typeof v === "string")) {
+              return (
+                <div key={key} className="p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
+                  <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide mb-1">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                  <div className="flex flex-wrap gap-1">{(val as string[]).map((item, i) => <span key={i} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-1.5 py-0.5 rounded-full">{item}</span>)}</div>
+                </div>
+              );
+            }
+            if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+              const subEntries = Object.entries(val as Record<string, unknown>).filter(([, v]) => v != null);
+              return (
+                <div key={key} className="p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
+                  <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide mb-1">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {subEntries.slice(0, 8).map(([sk, sv]) => (
+                      <div key={sk} className="flex justify-between bg-white rounded px-1.5 py-0.5 text-[10px]">
+                        <span className="text-dsc-text-secondary truncate mr-1">{sk.replace(/([A-Z])/g, " $1").trim()}</span>
+                        <span className={`font-medium ${typeof sv === "boolean" ? boolColor(sv) : "text-dsc-text"}`}>{typeof sv === "boolean" ? (sv ? "✓" : "✗") : String(sv).substring(0, 30)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            return null;
           })}
         </div>
       )}

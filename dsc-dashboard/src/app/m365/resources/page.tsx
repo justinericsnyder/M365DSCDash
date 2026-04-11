@@ -238,24 +238,7 @@ function M365ResourcesContent() {
                             ) : res.resourceType === "SecureScore" ? (
                               <SecureScoreMetrics properties={res.properties} />
                             ) : (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                  <p className="text-xs font-medium text-dsc-text-secondary mb-1">
-                                    {res.status === "COMPLIANT" ? "Current State" : "Desired State"}
-                                  </p>
-                                  <pre className="code-editor bg-dsc-green-50 rounded-lg p-3 text-xs overflow-auto max-h-48 border border-dsc-green/20">
-                                    {JSON.stringify(res.status === "COMPLIANT" ? res.properties : res.desiredState, null, 2)}
-                                  </pre>
-                                </div>
-                                {res.status !== "COMPLIANT" && (
-                                  <div>
-                                    <p className="text-xs font-medium text-dsc-text-secondary mb-1">Actual State</p>
-                                    <pre className="code-editor bg-dsc-red-50 rounded-lg p-3 text-xs overflow-auto max-h-48 border border-dsc-red/20">
-                                      {JSON.stringify(res.actualState, null, 2)}
-                                    </pre>
-                                  </div>
-                                )}
-                              </div>
+                              <ResourceDetail resource={res} />
                             )}
                           </div>
                         )}
@@ -525,6 +508,133 @@ function SecureScoreMetrics({ properties }: { properties: Record<string, unknown
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Generic Resource Detail Component ──────────────── */
+function ResourceDetail({ resource }: { resource: M365Resource }) {
+  const props = resource.properties || {};
+  const entries = Object.entries(props).filter(([, v]) => v !== null && v !== undefined);
+  const hasDrift = resource.status !== "COMPLIANT";
+
+  // Categorize properties into simple values vs complex objects
+  const simpleProps = entries.filter(([, v]) => typeof v !== "object");
+  const complexProps = entries.filter(([, v]) => typeof v === "object" && v !== null);
+
+  // Format a value for display
+  const formatVal = (val: unknown): { text: string; type: "string" | "boolean" | "number" | "array" | "object" } => {
+    if (typeof val === "boolean") return { text: val ? "Yes" : "No", type: "boolean" };
+    if (typeof val === "number") return { text: String(val), type: "number" };
+    if (Array.isArray(val)) return { text: val.join(", "), type: "array" };
+    if (typeof val === "object" && val !== null) return { text: JSON.stringify(val, null, 2), type: "object" };
+    return { text: String(val), type: "string" };
+  };
+
+  const boolColor = (val: unknown) => {
+    if (val === true) return "text-dsc-green";
+    if (val === false) return "text-dsc-red";
+    return "text-dsc-text";
+  };
+
+  return (
+    <div className="rounded-xl border border-dsc-border bg-white p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-dsc-text">{resource.displayName}</span>
+          <Badge variant={hasDrift ? "drifted" : "compliant"}>{resource.status}</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded font-mono">{resource.resourceType}</span>
+          <span className="text-[10px] text-dsc-text-secondary">{resource.workload}</span>
+        </div>
+      </div>
+
+      {/* Drift indicator */}
+      {hasDrift && resource.differingProperties.length > 0 && (
+        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-dsc-red-50 border border-dsc-red/20">
+          <AlertTriangle className="h-4 w-4 text-dsc-red flex-shrink-0" />
+          <div>
+            <p className="text-xs font-medium text-dsc-red">Configuration drift detected</p>
+            <div className="flex gap-1 mt-1">{resource.differingProperties.map((p) => <span key={p} className="text-[10px] bg-dsc-red/10 text-dsc-red px-1.5 py-0.5 rounded">{p}</span>)}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Simple properties as a clean grid */}
+      {simpleProps.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          {simpleProps.map(([key, val]) => {
+            const formatted = formatVal(val);
+            const isDrifted = resource.differingProperties.includes(key);
+            return (
+              <div key={key} className={`p-2.5 rounded-lg border ${isDrifted ? "bg-dsc-red-50 border-dsc-red/20" : "bg-dsc-bg border-dsc-border"}`}>
+                <p className="text-[10px] text-dsc-text-secondary font-medium uppercase tracking-wide">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                <p className={`text-sm font-medium mt-0.5 ${isDrifted ? "text-dsc-red" : formatted.type === "boolean" ? boolColor(val) : "text-dsc-text"}`}>
+                  {formatted.type === "boolean" && (
+                    <span className="mr-1">{val ? "✓" : "✗"}</span>
+                  )}
+                  {formatted.text}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Complex properties (objects/arrays) */}
+      {complexProps.length > 0 && (
+        <div className="space-y-2">
+          {complexProps.map(([key, val]) => {
+            const isDrifted = resource.differingProperties.includes(key);
+            if (Array.isArray(val) && val.every((v) => typeof v === "string")) {
+              // String array — show as pills
+              return (
+                <div key={key} className={`p-3 rounded-lg border ${isDrifted ? "bg-dsc-red-50 border-dsc-red/20" : "bg-dsc-bg border-dsc-border"}`}>
+                  <p className="text-[10px] text-dsc-text-secondary font-medium uppercase tracking-wide mb-1.5">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(val as string[]).map((item, i) => (
+                      <span key={i} className="text-xs bg-dsc-blue-50 text-dsc-blue px-2 py-0.5 rounded-full border border-dsc-blue/20">{item}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            // Object — show as nested key-value pairs
+            if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+              const subEntries = Object.entries(val as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined);
+              return (
+                <div key={key} className={`p-3 rounded-lg border ${isDrifted ? "bg-dsc-red-50 border-dsc-red/20" : "bg-dsc-bg border-dsc-border"}`}>
+                  <p className="text-[10px] text-dsc-text-secondary font-medium uppercase tracking-wide mb-2">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {subEntries.map(([subKey, subVal]) => (
+                      <div key={subKey} className="flex items-center justify-between bg-white rounded px-2 py-1 border border-dsc-border/50">
+                        <span className="text-[10px] text-dsc-text-secondary truncate mr-2">{subKey.replace(/([A-Z])/g, " $1").trim()}</span>
+                        <span className={`text-xs font-medium ${typeof subVal === "boolean" ? boolColor(subVal) : "text-dsc-text"}`}>
+                          {typeof subVal === "boolean" ? (subVal ? "✓ Yes" : "✗ No") : String(subVal)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            }
+            // Fallback — JSON
+            return (
+              <div key={key} className="p-3 rounded-lg bg-dsc-bg border border-dsc-border">
+                <p className="text-[10px] text-dsc-text-secondary font-medium uppercase tracking-wide mb-1">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                <pre className="code-editor text-xs overflow-auto max-h-32">{JSON.stringify(val, null, 2)}</pre>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Last checked */}
+      {resource.lastChecked && (
+        <p className="text-[10px] text-dsc-text-secondary text-right">Last checked: {timeAgo(resource.lastChecked)}</p>
+      )}
     </div>
   );
 }
