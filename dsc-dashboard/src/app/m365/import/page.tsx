@@ -83,7 +83,7 @@ export default function M365ImportPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 stagger-children max-w-4xl">
       <Link href="/m365">
         <Button variant="ghost" size="sm">
           <ArrowLeft className="h-4 w-4" /> Back to M365 Dashboard

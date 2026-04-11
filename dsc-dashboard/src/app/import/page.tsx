@@ -125,7 +125,7 @@ resources:
       _exist: true`;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 stagger-children max-w-4xl">
       <div>
         <h2 className="text-2xl font-bold text-dsc-text">Import Configuration</h2>
         <p className="text-sm text-dsc-text-secondary mt-1">

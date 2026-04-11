@@ -58,7 +58,7 @@ export default function DriftPage() {
       </div>
 
       {/* Severity summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 stagger-children">
         {(["CRITICAL", "HIGH", "MEDIUM", "LOW"] as const).map((sev) => {
           const colors: Record<string, { bg: string; text: string }> = {
             CRITICAL: { bg: "bg-dsc-red-50", text: "text-dsc-red" },
@@ -100,7 +100,7 @@ export default function DriftPage() {
 
       {/* Events */}
       {loading ? (
-        <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" /></div>
+        <div className="space-y-3 animate-pulse">{[1,2,3].map((i) => <div key={i} className="rounded-xl border border-dsc-border bg-dsc-surface p-6 h-20" />)}</div>
       ) : events.length === 0 ? (
         <EmptyState icon={AlertTriangle} title="No drift events" description={resolvedFilter === "false" ? "All systems in desired state." : "No events match filters."} />
       ) : (
@@ -154,7 +154,7 @@ export default function DriftPage() {
 
                 {/* Expanded detail */}
                 {isExpanded && (
-                  <div className="mt-4 pt-4 border-t border-dsc-border space-y-4">
+                  <div className="mt-4 pt-4 border-t border-dsc-border space-y-4 animate-slide-down">
                     {/* Per-property breakdown */}
                     {props.map((prop: string) => {
                       const explanation = getExplanation(prop) || getGenericExplanation(prop);

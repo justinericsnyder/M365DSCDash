@@ -62,7 +62,7 @@ export default function AdminPage() {
   if (error) return <div className="text-center py-16 text-dsc-red">{error}</div>;
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 stagger-children max-w-4xl">
       <div>
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-bold text-dsc-text">Admin Panel</h2>

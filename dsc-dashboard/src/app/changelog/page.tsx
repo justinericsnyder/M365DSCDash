@@ -432,7 +432,7 @@ const typeBadge: Record<string, { variant: "compliant" | "active" | "drifted"; l
 
 export default function ChangelogPage() {
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 stagger-children max-w-3xl">
       <div>
         <h2 className="text-2xl font-bold text-dsc-text">Changelog</h2>
         <p className="text-sm text-dsc-text-secondary mt-1">Release history and updates</p>
@@ -447,7 +447,7 @@ export default function ChangelogPage() {
             const Icon = entry.icon;
             const badge = typeBadge[entry.type];
             return (
-              <div key={i} className="relative pl-12">
+              <div key={i} className="relative pl-12 animate-gravity-in">
                 {/* Timeline dot */}
                 <div className="absolute left-0 top-6 h-10 w-10 rounded-full bg-dsc-surface border-2 border-dsc-border flex items-center justify-center z-10">
                   <Icon className="h-4 w-4 text-dsc-blue" />

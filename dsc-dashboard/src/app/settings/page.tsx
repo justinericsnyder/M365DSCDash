@@ -167,7 +167,7 @@ function SettingsContent() {
   const isConnected = msStatus?.connected;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 stagger-children max-w-3xl">
       <div>
         <h2 className="text-2xl font-bold text-dsc-text">Settings</h2>
         <p className="text-sm text-dsc-text-secondary mt-1">Connect your Microsoft 365 tenant and manage data</p>
