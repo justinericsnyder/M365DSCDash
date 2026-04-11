@@ -333,6 +333,35 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
 
   // ─── Exchange: Mailbox Settings (current user) ────────
   const mailboxSettings = await tryGraphGet(token, "/me/mailboxSettings");
+
+  // ─── Security: Alerts (recent) ────────────────────────
+  const secAlerts = await tryGraphGet(token, "/security/alerts_v2?$top=20&$orderby=createdDateTime desc");
+  if (secAlerts.data) {
+    for (const alert of ((secAlerts.data as any).value || []).slice(0, 15)) {
+      resources.push({
+        workload: "DEFENDER", resourceType: "SecurityAlert",
+        displayName: alert.title || alert.alertType || "Security Alert",
+        properties: { Title: alert.title, Severity: alert.severity, Status: alert.status, Category: alert.category, Source: alert.detectionSource, CreatedDateTime: alert.createdDateTime, Description: alert.description?.substring(0, 200), ServiceSource: alert.serviceSource, IncidentId: alert.incidentId },
+        status: alert.status === "resolved" ? "COMPLIANT" : "DRIFTED",
+        differingProperties: alert.status !== "resolved" ? ["AlertStatus"] : [],
+      });
+    }
+  }
+
+  // ─── Security: Incidents (recent) ─────────────────────
+  const incidents = await tryGraphGet(token, "/security/incidents?$top=10&$orderby=createdDateTime desc");
+  if (incidents.data) {
+    for (const inc of ((incidents.data as any).value || []).slice(0, 10)) {
+      resources.push({
+        workload: "DEFENDER", resourceType: "SecurityIncident",
+        displayName: inc.displayName || inc.incidentName || "Incident",
+        properties: { DisplayName: inc.displayName, Severity: inc.severity, Status: inc.status, Classification: inc.classification, CreatedDateTime: inc.createdDateTime, LastUpdateDateTime: inc.lastUpdateDateTime, AssignedTo: inc.assignedTo, AlertCount: inc.alerts?.length },
+        status: inc.status === "resolved" ? "COMPLIANT" : "DRIFTED",
+        differingProperties: inc.status !== "resolved" ? ["IncidentStatus"] : [],
+      });
+    }
+  }
+
   if (mailboxSettings.data) {
     const ms = mailboxSettings.data as any;
     resources.push({

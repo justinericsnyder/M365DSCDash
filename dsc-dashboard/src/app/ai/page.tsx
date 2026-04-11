@@ -412,32 +412,143 @@ function FabricAITab() {
 /* ─── Copilot for Security Tab ─────────────────────────── */
 function CopilotSecurityTab({ data }: any) {
   const scoreControls = data?.scoreControls || [];
+  const alerts = data?.securityAlerts || [];
+  const incidents = data?.securityIncidents || [];
+  const t = data?.totals || {};
+  const secureScore = data?.secureScore;
+  const currentScore = Number(secureScore?.CurrentScore) || 0;
+  const maxScore = Number(secureScore?.MaxScore) || 1;
+  const scorePct = maxScore > 0 ? Math.round((currentScore / maxScore) * 100) : 0;
+  const scoreColor = scorePct >= 80 ? "#7ECC9A" : scorePct >= 60 ? "#E8D07A" : "#F28B8B";
+
   const aiControls = scoreControls.filter((c: any) => {
     const svc = String((c.properties as any)?.Service || "").toLowerCase();
     return svc.includes("copilot") || svc.includes("ai") || svc.includes("defender") || svc.includes("identity");
-  }).slice(0, 12);
+  }).slice(0, 16);
+
+  const sevColors: Record<string, string> = { high: "text-dsc-red", medium: "text-dsc-yellow", low: "text-dsc-blue", informational: "text-dsc-text-secondary" };
 
   return (
-    <div className="space-y-6">
-      <div className="p-4 rounded-lg bg-dsc-red-50/50 border border-dsc-red/20">
+    <div className="space-y-6 stagger-children">
+      <div className="p-4 rounded-lg bg-dsc-red-50/50 border border-dsc-red/20 animate-gravity-in">
         <div className="flex items-center gap-2 mb-2"><ShieldCheck className="h-4 w-4 text-dsc-red" /><span className="text-sm font-semibold">Microsoft Copilot for Security</span></div>
-        <p className="text-xs text-dsc-text-secondary">AI-powered security investigation, threat hunting, posture management, and reporting across Defender, Sentinel, Intune, Entra, and Purview.</p>
+        <p className="text-xs text-dsc-text-secondary">AI-powered security investigation, threat hunting, posture management, and reporting.</p>
       </div>
 
-      {/* Security controls relevant to AI */}
+      {/* Security KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard icon={ShieldCheck} label="Secure Score" value={`${scorePct}%`} sub={`${Math.round(currentScore)}/${Math.round(maxScore)}`} color="green" trend={generateTrend(scorePct)} />
+        <MetricCard icon={Shield} label="Security Alerts" value={t.securityAlerts || 0} sub={`${t.activeAlerts || 0} active`} color="orange" trend={generateTrend(t.activeAlerts > 0 ? 40 : 90)} />
+        <MetricCard icon={Monitor} label="Incidents" value={t.securityIncidents || 0} sub={`${t.activeIncidents || 0} active`} color="purple" trend={generateTrend(t.activeIncidents > 0 ? 30 : 95)} />
+        <MetricCard icon={BarChart3} label="Controls" value={aiControls.length} sub="monitored" color="blue" trend={generateTrend(75)} />
+      </div>
+
+      {/* Secure Score Radial */}
+      {secureScore && (
+        <Card className="animate-gravity-in">
+          <div className="flex flex-col sm:flex-row items-center gap-6 p-2">
+            <div className="relative h-32 w-32 flex-shrink-0">
+              <svg className="h-32 w-32 -rotate-90" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--color-border)" strokeWidth="8" opacity="0.3" />
+                <circle cx="60" cy="60" r="50" fill="none" stroke={scoreColor} strokeWidth="8" strokeDasharray={`${(scorePct / 100) * 314} 314`} strokeLinecap="round" className="transition-all duration-1000" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-bold" style={{ color: scoreColor }}>{scorePct}%</span>
+                <span className="text-[10px] text-dsc-text-secondary">score</span>
+              </div>
+            </div>
+            <div className="flex-1 space-y-2">
+              <p className="text-sm font-semibold">{Math.round(currentScore)} / {Math.round(maxScore)} points</p>
+              <div className="h-2 rounded-full bg-dsc-border/30"><div className="h-2 rounded-full transition-all duration-1000" style={{ width: `${scorePct}%`, backgroundColor: scoreColor }} /></div>
+              <p className="text-xs text-dsc-text-secondary">{(maxScore - currentScore).toFixed(0)} improvement points available</p>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {(Array.isArray(secureScore.EnabledServices) ? secureScore.EnabledServices : []).map((svc: string) => (
+                  <span key={svc} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-2 py-0.5 rounded-full border border-dsc-blue/20">{svc}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Security Alerts */}
+        <Card className="animate-gravity-in">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4 text-dsc-red" />Security Alerts ({alerts.length})</CardTitle></CardHeader>
+          <CardContent>
+            {alerts.length === 0 ? (
+              <div className="text-center py-6"><CheckCircle2 className="h-8 w-8 text-dsc-green mx-auto mb-2" /><p className="text-xs text-dsc-text-secondary">No security alerts detected</p></div>
+            ) : (
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {alerts.map((alert: any) => {
+                  const props = alert.properties as any;
+                  const sev = String(props?.Severity || "medium").toLowerCase();
+                  return (
+                    <div key={alert.id} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+                      <StatusDot status={alert.status === "COMPLIANT" ? "COMPLIANT" : "ERROR"} pulse={alert.status !== "COMPLIANT"} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{alert.displayName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-[10px] font-semibold ${sevColors[sev] || "text-dsc-text-secondary"}`}>{props?.Severity}</span>
+                          <span className="text-[9px] text-dsc-text-secondary">{props?.Category}</span>
+                          <span className="text-[9px] text-dsc-text-secondary">{timeAgo(props?.CreatedDateTime)}</span>
+                        </div>
+                      </div>
+                      <Badge variant={props?.Status === "resolved" ? "compliant" : props?.Status === "inProgress" ? "active" : "error"}>{props?.Status}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Security Incidents */}
+        <Card className="animate-gravity-in">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Monitor className="h-4 w-4 text-purple-600" />Security Incidents ({incidents.length})</CardTitle></CardHeader>
+          <CardContent>
+            {incidents.length === 0 ? (
+              <div className="text-center py-6"><CheckCircle2 className="h-8 w-8 text-dsc-green mx-auto mb-2" /><p className="text-xs text-dsc-text-secondary">No security incidents</p></div>
+            ) : (
+              <div className="space-y-2 max-h-72 overflow-y-auto">
+                {incidents.map((inc: any) => {
+                  const props = inc.properties as any;
+                  const sev = String(props?.Severity || "medium").toLowerCase();
+                  return (
+                    <div key={inc.id} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+                      <StatusDot status={inc.status === "COMPLIANT" ? "COMPLIANT" : "ERROR"} pulse={inc.status !== "COMPLIANT"} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{inc.displayName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className={`text-[10px] font-semibold ${sevColors[sev] || "text-dsc-text-secondary"}`}>{props?.Severity}</span>
+                          <span className="text-[9px] text-dsc-text-secondary">{props?.Classification || "Unclassified"}</span>
+                          <span className="text-[9px] text-dsc-text-secondary">{timeAgo(props?.CreatedDateTime)}</span>
+                        </div>
+                      </div>
+                      <Badge variant={props?.Status === "resolved" ? "compliant" : "error"}>{props?.Status}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Security Controls */}
       {aiControls.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4 text-dsc-red" />Security Controls ({aiControls.length})</CardTitle></CardHeader>
+        <Card className="animate-gravity-in">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4 text-dsc-blue" />Security Controls ({aiControls.length})</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {aiControls.map((ctrl: any, i: number) => {
                 const props = ctrl.properties as any;
                 const pct = props?.MaxScore > 0 ? Math.round(((props?.CurrentScore || 0) / props.MaxScore) * 100) : 0;
-                const color = pct >= 80 ? "text-dsc-green" : pct >= 50 ? "text-dsc-yellow" : "text-dsc-red";
+                const barColor = pct >= 80 ? "#7ECC9A" : pct >= 50 ? "#E8D07A" : "#F28B8B";
                 return (
                   <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
                     <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{ctrl.displayName}</p><p className="text-[9px] text-dsc-text-secondary">{props?.Service} · {props?.ControlCategory}</p></div>
-                    <div className="flex items-center gap-2 flex-shrink-0"><span className={`text-xs font-bold ${color}`}>{pct}%</span><div className="w-12 h-1.5 rounded-full bg-dsc-border/30"><div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: pct >= 80 ? "#38A169" : pct >= 50 ? "#D69E2E" : "#E53E3E" }} /></div></div>
+                    <div className="flex items-center gap-2 flex-shrink-0"><span className="text-xs font-bold" style={{ color: barColor }}>{pct}%</span><div className="w-14 h-2 rounded-full bg-dsc-border/30"><div className="h-2 rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: barColor }} /></div></div>
                   </div>
                 );
               })}
@@ -446,26 +557,11 @@ function CopilotSecurityTab({ data }: any) {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <InfoCard title="Capabilities" icon={Sparkles} color="text-dsc-red" items={[
-          { name: "Incident Investigation", desc: "Summarize incidents, analyze attack chains, recommend response" },
-          { name: "Threat Hunting", desc: "Generate KQL from natural language, search Defender + Sentinel" },
-          { name: "Posture Management", desc: "Analyze Secure Score, identify misconfigs, generate scripts" },
-          { name: "Script Analysis", desc: "Reverse-engineer suspicious scripts, decode obfuscated code" },
-          { name: "Identity Investigation", desc: "Analyze risky sign-ins, investigate compromised accounts" },
-        ]} />
-        <InfoCard title="Admin Configuration" icon={Settings} color="text-dsc-red" items={[
-          { name: "Security Compute Units", desc: "Billed per SCU — provision capacity in Azure" },
-          { name: "Plugin Management", desc: "Enable/disable Defender, Sentinel, Intune, Entra plugins" },
-          { name: "Role Assignments", desc: "Copilot Owner and Contributor roles for access control" },
-          { name: "Data Sharing", desc: "Control data sharing with Microsoft for improvement" },
-          { name: "Audit Logging", desc: "All sessions logged in Microsoft Purview audit" },
-        ]} />
-      </div>
       <PortalLinks links={[
         { label: "Security Copilot", url: "https://security.microsoft.com/copilot" },
+        { label: "Defender Portal", url: "https://security.microsoft.com" },
         { label: "SCU Management", url: "https://portal.azure.com/#view/Microsoft_Azure_Security_Copilot" },
-        { label: "Security Copilot Docs", url: "https://learn.microsoft.com/en-us/copilot/security/microsoft-security-copilot" },
+        { label: "Security Docs", url: "https://learn.microsoft.com/en-us/copilot/security/microsoft-security-copilot" },
       ]} />
     </div>
   );

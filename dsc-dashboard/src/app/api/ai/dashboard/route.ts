@@ -59,8 +59,29 @@ export async function GET() {
     const riskyAgents = agents.filter((a) => a.riskCount > 0);
     const pinnedAgents = agents.filter((a) => a.isPinned);
 
+    // Security data
+    const securityAlerts = await prisma.m365Resource.findMany({
+      where: { tenantId: ctx.tenantId, resourceType: "SecurityAlert" },
+      orderBy: { updatedAt: "desc" },
+      take: 20,
+    });
+    const securityIncidents = await prisma.m365Resource.findMany({
+      where: { tenantId: ctx.tenantId, resourceType: "SecurityIncident" },
+      orderBy: { updatedAt: "desc" },
+      take: 10,
+    });
+
+    // Alert severity breakdown
+    const alertsBySeverity: Record<string, number> = {};
+    for (const a of securityAlerts) {
+      const sev = String((a.properties as any)?.Severity || "unknown");
+      alertsBySeverity[sev] = (alertsBySeverity[sev] || 0) + 1;
+    }
+    const activeAlerts = securityAlerts.filter((a) => a.status !== "COMPLIANT");
+    const activeIncidents = securityIncidents.filter((i) => i.status !== "COMPLIANT");
+
     const stats = {
-      hasData: aiResources.length > 0 || agents.length > 0,
+      hasData: aiResources.length > 0 || agents.length > 0 || securityAlerts.length > 0,
       isDemoMode: ctx.isDemoMode,
       totals: {
         aiResources: aiResources.length,
@@ -77,11 +98,18 @@ export async function GET() {
         riskyAgents: riskyAgents.length,
         pinnedAgents: pinnedAgents.length,
         agentsByType,
+        securityAlerts: securityAlerts.length,
+        activeAlerts: activeAlerts.length,
+        securityIncidents: securityIncidents.length,
+        activeIncidents: activeIncidents.length,
+        alertsBySeverity,
       },
       secureScore: secureScore ? secureScore.properties : null,
       scoreControls: scoreControls.map((c) => ({ displayName: c.displayName, properties: c.properties, status: c.status })),
       resources: byType,
       agents: agents.slice(0, 20),
+      securityAlerts,
+      securityIncidents,
     };
 
     await cacheSet(cacheKey, stats, 30);
