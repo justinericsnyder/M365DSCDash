@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   GitCommit, Shield, Cloud, Bot, ShieldCheck, Search,
-  Sparkles, Lock, TrendingUp, Zap, Database, Bug,
+  Sparkles, Lock, TrendingUp, Zap, Database, Bug, Brain,
 } from "lucide-react";
 
 interface ChangelogEntry {
@@ -19,6 +19,86 @@ interface ChangelogEntry {
 }
 
 const changelog: ChangelogEntry[] = [
+  {
+    version: "3.5.0",
+    date: "April 10, 2026",
+    type: "feature",
+    title: "Entra Agent ID APIs + UX Animations Across All Pages",
+    description: "New Microsoft Entra Agent ID integration pulling agent identities, instances, collections, blueprints, and manifests. Plus skeleton loading states and gravity animations on every page.",
+    icon: Sparkles,
+    commitHash: "78c6448",
+    details: [
+      "Entra Agent ID sync: agent collections, instances, card manifests, identities, blueprints via 5 new beta Graph endpoints",
+      "AI Governance: new KPI row showing Agent Identities, Instances, Collections, Manifests, Blueprints counts",
+      "New scopes: AgentCollection.Read.All, AgentIdentity.Read.All, AgentIdentityBlueprint.Read.All, AgentInstance.Read.All, AgentCardManifest.Read.All",
+      "Dashboard: skeleton loading state with layout placeholders, gravity-in animations, stagger-children on all grids",
+      "M365 DSC: skeleton loading, workload card stagger animations",
+      "Nodes: skeleton loading with 4 card placeholders, stagger on node list",
+      "Purview, Agents, Drift, Resources, Configurations: stagger-children animations added",
+    ],
+  },
+  {
+    version: "3.4.0",
+    date: "April 10, 2026",
+    type: "feature",
+    title: "Azure AI Foundry + Copilot in Fabric Tabs with Live Data",
+    description: "Both tabs rebuilt with live Secure Score data, animated radial dials, security controls, capability cards with sparklines, and capacity requirement visuals.",
+    icon: Brain,
+    commitHash: "d599123",
+    details: [
+      "Foundry: 4 KPI cards, Secure Score radial, AI-relevant controls grid, model deployment cards with sparklines, safety governance checklist",
+      "Fabric: capability readiness cards with sparklines, admin config with status badges, capacity SKU radials (F64/P1/F128+)",
+      "All sections use gravity-in and stagger-children animations",
+    ],
+  },
+  {
+    version: "3.3.0",
+    date: "April 10, 2026",
+    type: "feature",
+    title: "Live Security Tab — Alerts, Incidents, Score Controls",
+    description: "Copilot for Security tab rebuilt with live data from Graph API security endpoints.",
+    icon: ShieldCheck,
+    commitHash: "4366935",
+    details: [
+      "Security KPI cards: Secure Score %, alerts, incidents, controls with sparklines",
+      "Secure Score radial dial with animated 1s fill and enabled services pills",
+      "Security Alerts list from GET /security/alerts_v2 with severity color coding",
+      "Security Incidents list from GET /security/incidents with classification",
+      "Security Controls grid with per-control progress bars",
+      "Dark mode bulk fixes: badges, status dots, buttons, all bg-white/gray replaced",
+    ],
+  },
+  {
+    version: "3.2.0",
+    date: "April 10, 2026",
+    type: "feature",
+    title: "Dark Crimson-Mauve Theme + WCAG AA Accessibility",
+    description: "Complete dark theme with deep crimson-mauve backgrounds, soft mauve-red accents, gravity animations, and WCAG AA contrast compliance.",
+    icon: Sparkles,
+    commitHash: "63cd4f4",
+    details: [
+      "Background: #1A0C12 (dark cherry), Surface: #2C1420 (warm burgundy), Border: #5A2438 (rose)",
+      "Button primary: #8B3A5C (deep mauve-rose) with white text — high contrast",
+      "Blue accent shifted to #B89ADA (soft lavender-mauve) for theme cohesion",
+      "WCAG AA: primary text 12.4:1, secondary 6.2:1, all accents 4.5:1+ on surface",
+      "Gravity animations: card-hover with spring bounce, gravity-in, fade-scale-in, slide-down, stagger-children",
+      "Scrollbar, code editor, form inputs all themed",
+    ],
+  },
+  {
+    version: "3.1.0",
+    date: "April 10, 2026",
+    type: "feature",
+    title: "Connector Detail Modal + Reusable Modal Component",
+    description: "Click any Graph connector in AI Governance to open a detailed modal with schema properties, metrics, and configuration.",
+    icon: Sparkles,
+    commitHash: "7a184e4",
+    details: [
+      "Connector modal: status banner, schema property radial, indexed items, connection details, activity/search settings",
+      "Reusable Modal component: backdrop blur, escape key, click-outside, body scroll lock, wide variant",
+      "Collapsible raw properties view",
+    ],
+  },
   {
     version: "3.0.0",
     date: "April 10, 2026",
