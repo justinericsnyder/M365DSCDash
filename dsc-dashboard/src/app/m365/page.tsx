@@ -90,8 +90,10 @@ export default function M365Page() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" />
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 w-56 bg-dsc-border/30 rounded-lg" />
+        <div className="grid grid-cols-4 gap-4">{[1,2,3,4].map((i) => <div key={i} className="rounded-xl border border-dsc-border bg-dsc-surface p-6 h-24" />)}</div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">{[1,2,3,4,5,6,7,8].map((i) => <div key={i} className="rounded-xl border border-dsc-border bg-dsc-surface p-6 h-32" />)}</div>
       </div>
     );
   }
@@ -197,9 +199,9 @@ export default function M365Page() {
       </div>
 
       {/* Workload Cards */}
-      <div>
+      <div className="animate-gravity-in">
         <h3 className="text-lg font-semibold text-dsc-text mb-3">Workload Compliance</h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
           {Object.entries(workloads || {}).map(([key, wl]) => {
             const meta = WORKLOAD_META[key] || { label: key, icon: Cloud, color: "text-dsc-text-secondary", bgColor: "bg-dsc-bg" };
             const Icon = meta.icon;
