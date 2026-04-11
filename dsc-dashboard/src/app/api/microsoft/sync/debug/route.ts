@@ -57,6 +57,12 @@ export async function GET() {
       { name: "Teams App Catalog", path: "/appCatalogs/teamsApps?$top=5", beta: false },
       { name: "OAuth2 Grants (AI)", path: "/oauth2PermissionGrants?$top=5", beta: false },
       { name: "Teams App Settings", path: "/teamwork/teamsAppSettings", beta: true },
+      // Agent Identity APIs (Entra Agent ID)
+      { name: "Agent Collections", path: "/agentRegistry/agentCollections", beta: true },
+      { name: "Agent Instances", path: "/agentRegistry/agentInstances", beta: true },
+      { name: "Agent Card Manifests", path: "/agentRegistry/agentCardManifests", beta: true },
+      { name: "Agent Identities", path: "/agentIdentities", beta: true },
+      { name: "Agent Identity Blueprints", path: "/agentIdentityBlueprints", beta: true },
     ];
 
     const results: Array<{ name: string; path: string; status: string; count?: number; error?: string }> = [];

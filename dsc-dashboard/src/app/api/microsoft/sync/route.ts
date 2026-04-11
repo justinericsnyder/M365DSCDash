@@ -800,6 +800,64 @@ async function syncAICopilotSettings(token: string, tenantId: string): Promise<S
     }
   }
 
+  // ─── Agent Registry (Entra Agent ID) ───────────────────
+  const agentCollections = await tryGraphGet(token, "/agentRegistry/agentCollections", true);
+  if (agentCollections.data) {
+    for (const col of ((agentCollections.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "AgentCollection", displayName: col.displayName || col.id || "Collection",
+        properties: { Id: col.id, DisplayName: col.displayName, Description: col.description, CreatedDateTime: col.createdDateTime },
+        status: "COMPLIANT", differingProperties: [],
+      });
+    }
+  }
+
+  const agentInstances = await tryGraphGet(token, "/agentRegistry/agentInstances", true);
+  if (agentInstances.data) {
+    for (const inst of ((agentInstances.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "AgentInstance", displayName: inst.displayName || inst.id || "Agent Instance",
+        properties: { Id: inst.id, DisplayName: inst.displayName, Description: inst.description, Status: inst.status, AgentCardManifestId: inst.agentCardManifestId, CreatedDateTime: inst.createdDateTime, LastModifiedDateTime: inst.lastModifiedDateTime },
+        status: inst.status === "active" || inst.status === "enabled" ? "COMPLIANT" : "DRIFTED",
+        differingProperties: inst.status === "active" || inst.status === "enabled" ? [] : ["AgentStatus"],
+      });
+    }
+  }
+
+  const agentManifests = await tryGraphGet(token, "/agentRegistry/agentCardManifests", true);
+  if (agentManifests.data) {
+    for (const manifest of ((agentManifests.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "AgentCardManifest", displayName: manifest.displayName || manifest.name || manifest.id || "Manifest",
+        properties: { Id: manifest.id, DisplayName: manifest.displayName, Name: manifest.name, Description: manifest.description, Version: manifest.version, Skills: manifest.skills, CreatedDateTime: manifest.createdDateTime },
+        status: "COMPLIANT", differingProperties: [],
+      });
+    }
+  }
+
+  const agentIdentities = await tryGraphGet(token, "/agentIdentities", true);
+  if (agentIdentities.data) {
+    for (const identity of ((agentIdentities.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "AgentIdentity", displayName: identity.displayName || identity.id || "Agent Identity",
+        properties: { Id: identity.id, DisplayName: identity.displayName, AccountEnabled: identity.accountEnabled, AgentType: identity.agentType, BlueprintId: identity.blueprintId, OwnerId: identity.ownerId, SponsorId: identity.sponsorId, CreatedDateTime: identity.createdDateTime },
+        status: identity.accountEnabled !== false ? "COMPLIANT" : "DRIFTED",
+        differingProperties: identity.accountEnabled === false ? ["AccountEnabled"] : [],
+      });
+    }
+  }
+
+  const agentBlueprints = await tryGraphGet(token, "/agentIdentityBlueprints", true);
+  if (agentBlueprints.data) {
+    for (const bp of ((agentBlueprints.data as any).value || [])) {
+      resources.push({
+        workload: "AAD", resourceType: "AgentIdentityBlueprint", displayName: bp.displayName || bp.id || "Blueprint",
+        properties: { Id: bp.id, DisplayName: bp.displayName, Description: bp.description, AgentType: bp.agentType, Permissions: bp.permissions, CreatedDateTime: bp.createdDateTime },
+        status: "COMPLIANT", differingProperties: [],
+      });
+    }
+  }
+
   if (resources.length === 0) {
     return { success: true, count: 0, reason: "No AI/Copilot settings accessible with current permissions." };
   }

@@ -105,6 +105,17 @@ function OverviewTab({ data, t, expandedId, setExpandedId }: any) {
         <MetricCard icon={ShieldCheck} label="Secure Score" value={`${scorePct}%`} sub={`${Math.round(currentScore)}/${Math.round(maxScore)}`} color="orange" trend={generateTrend(scorePct)} />
       </div>
 
+      {/* Agent Identity metrics */}
+      {((data?.resources?.AgentIdentity || []).length > 0 || (data?.resources?.AgentInstance || []).length > 0 || (data?.resources?.AgentCollection || []).length > 0) && (
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 stagger-children">
+          <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-blue-50 p-2"><Key className="h-4 w-4 text-dsc-blue" /></div><div><p className="text-xl font-bold">{(data?.resources?.AgentIdentity || []).length}</p><p className="text-[10px] text-dsc-text-secondary">Agent Identities</p></div></div></Card>
+          <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-purple-50 p-2"><Cpu className="h-4 w-4 text-purple-600" /></div><div><p className="text-xl font-bold">{(data?.resources?.AgentInstance || []).length}</p><p className="text-[10px] text-dsc-text-secondary">Agent Instances</p></div></div></Card>
+          <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-green-50 p-2"><Layers className="h-4 w-4 text-dsc-green" /></div><div><p className="text-xl font-bold">{(data?.resources?.AgentCollection || []).length}</p><p className="text-[10px] text-dsc-text-secondary">Collections</p></div></div></Card>
+          <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-yellow-50 p-2"><FileCode2 className="h-4 w-4 text-dsc-yellow" /></div><div><p className="text-xl font-bold">{(data?.resources?.AgentCardManifest || []).length}</p><p className="text-[10px] text-dsc-text-secondary">Card Manifests</p></div></div></Card>
+          <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-red-50 p-2"><Brain className="h-4 w-4 text-dsc-red" /></div><div><p className="text-xl font-bold">{(data?.resources?.AgentIdentityBlueprint || []).length}</p><p className="text-[10px] text-dsc-text-secondary">Blueprints</p></div></div></Card>
+        </div>
+      )}
+
       {/* Agent breakdown donut */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>

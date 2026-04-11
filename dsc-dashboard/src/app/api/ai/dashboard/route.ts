@@ -15,7 +15,7 @@ export async function GET() {
     if (cached) return NextResponse.json(cached);
 
     // Get all AI-related resources
-    const aiTypes = ["CopilotLimitedMode", "CopilotGraphConnector", "CopilotServicePrincipal", "CopilotTeamsApp", "CopilotOAuthConsent", "CopilotPinnedAgent", "PowerPlatformAISettings"];
+    const aiTypes = ["CopilotLimitedMode", "CopilotGraphConnector", "CopilotServicePrincipal", "CopilotTeamsApp", "CopilotOAuthConsent", "CopilotPinnedAgent", "PowerPlatformAISettings", "AgentCollection", "AgentInstance", "AgentCardManifest", "AgentIdentity", "AgentIdentityBlueprint"];
     const aiResources = await prisma.m365Resource.findMany({
       where: { tenantId: ctx.tenantId, resourceType: { in: aiTypes } },
       orderBy: [{ resourceType: "asc" }, { displayName: "asc" }],

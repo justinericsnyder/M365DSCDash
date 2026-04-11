@@ -51,6 +51,11 @@ const SCOPES = [
   "Channel.ReadBasic.All",                       // Teams channels
   "ExternalConnection.Read.All",                 // Graph connectors
   "AppCatalog.Read.All",                         // Teams app catalog
+  "AgentCollection.Read.All",                    // Agent collections
+  "AgentIdentity.Read.All",                      // Agent identities
+  "AgentIdentityBlueprint.Read.All",             // Agent blueprints
+  "AgentInstance.Read.All",                      // Agent instances
+  "AgentCardManifest.Read.All",                  // Agent card manifests
 ].join(" ");
 
 // ─── OAuth2 Authorization Code + PKCE ───────────────────
