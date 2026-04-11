@@ -317,57 +317,132 @@ function AzureAIFoundryTab({ data }: any) {
   const currentScore = Number(secureScore?.CurrentScore) || 0;
   const maxScore = Number(secureScore?.MaxScore) || 1;
   const scorePct = maxScore > 0 ? Math.round((currentScore / maxScore) * 100) : 0;
-  const scoreColor = scorePct >= 80 ? "#38A169" : scorePct >= 60 ? "#D69E2E" : "#E53E3E";
+  const scoreColor = scorePct >= 80 ? "#7ECC9A" : scorePct >= 60 ? "#E8D07A" : "#F28B8B";
+  const t = data?.totals || {};
+  const scoreControls = data?.scoreControls || [];
+  const aiSPs = (data?.resources?.CopilotServicePrincipal || []).filter((sp: any) => {
+    const name = String(sp.displayName || "").toLowerCase();
+    return name.includes("openai") || name.includes("cognitive") || name.includes("ai foundry") || name.includes("azure ai");
+  });
+
+  // Filter controls relevant to AI/data
+  const aiControls = scoreControls.filter((c: any) => {
+    const svc = String((c.properties as any)?.Service || "").toLowerCase();
+    const cat = String((c.properties as any)?.ControlCategory || "").toLowerCase();
+    return svc.includes("azure") || cat.includes("data") || cat.includes("app") || svc.includes("information");
+  }).slice(0, 8);
 
   return (
-    <div className="space-y-6">
-      <div className="p-4 rounded-lg bg-dsc-blue-50/50 border border-dsc-blue/20">
+    <div className="space-y-6 stagger-children">
+      <div className="p-4 rounded-lg bg-dsc-blue-50/50 border border-dsc-blue/20 animate-gravity-in">
         <div className="flex items-center gap-2 mb-2"><Brain className="h-4 w-4 text-dsc-blue" /><span className="text-sm font-semibold">Azure AI Foundry</span></div>
-        <p className="text-xs text-dsc-text-secondary">Build, evaluate, and deploy AI models. Manage Azure OpenAI, custom models, prompt flows, and AI endpoints.</p>
+        <p className="text-xs text-dsc-text-secondary">Build, evaluate, and deploy AI models. Manage Azure OpenAI deployments, custom models, prompt flows, and AI endpoints.</p>
       </div>
 
-      {/* Secure Score as AI security posture */}
-      {secureScore && (
-        <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-orange-600" />AI Security Posture (Secure Score)</CardTitle></CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-6">
-              <div className="relative h-24 w-24 flex-shrink-0">
-                <svg className="h-24 w-24 -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="#E2E8F0" strokeWidth="8" />
-                  <circle cx="50" cy="50" r="42" fill="none" stroke={scoreColor} strokeWidth="8" strokeDasharray={`${(scorePct / 100) * 264} 264`} strokeLinecap="round" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-xl font-bold" style={{ color: scoreColor }}>{scorePct}%</span></div>
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">{Math.round(currentScore)} / {Math.round(maxScore)} points</p>
-                <p className="text-xs text-dsc-text-secondary mt-1">{(maxScore - currentScore).toFixed(0)} improvement points available</p>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {(Array.isArray(secureScore.EnabledServices) ? secureScore.EnabledServices : []).map((svc: string) => (
-                    <span key={svc} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-2 py-0.5 rounded-full border border-dsc-blue/20">{svc}</span>
-                  ))}
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard icon={ShieldCheck} label="Security Posture" value={`${scorePct}%`} sub={`${Math.round(currentScore)}/${Math.round(maxScore)}`} color="green" trend={generateTrend(scorePct)} />
+        <MetricCard icon={Shield} label="AI Service Principals" value={aiSPs.length + (t.servicePrincipals || 0)} sub={`${t.enabledSPs || 0} enabled`} color="blue" trend={generateTrend(85)} />
+        <MetricCard icon={BarChart3} label="Security Controls" value={aiControls.length} sub="AI-relevant" color="orange" trend={generateTrend(70)} />
+        <MetricCard icon={Plug} label="Graph Connectors" value={t.connectors || 0} sub="data sources" color="purple" trend={generateTrend(t.connectors > 0 ? 90 : 0)} />
+      </div>
+
+      {/* Secure Score + Controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {secureScore && (
+          <Card className="animate-gravity-in">
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-dsc-green" />AI Security Posture</CardTitle></CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-6">
+                <div className="relative h-28 w-28 flex-shrink-0">
+                  <svg className="h-28 w-28 -rotate-90" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="var(--color-border)" strokeWidth="8" opacity="0.3" />
+                    <circle cx="60" cy="60" r="50" fill="none" stroke={scoreColor} strokeWidth="8" strokeDasharray={`${(scorePct / 100) * 314} 314`} strokeLinecap="round" className="transition-all duration-1000" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-bold" style={{ color: scoreColor }}>{scorePct}%</span>
+                    <span className="text-[9px] text-dsc-text-secondary">score</span>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm font-medium">{Math.round(currentScore)} / {Math.round(maxScore)} points</p>
+                  <div className="h-2 rounded-full bg-dsc-border/30"><div className="h-2 rounded-full transition-all duration-1000" style={{ width: `${scorePct}%`, backgroundColor: scoreColor }} /></div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(Array.isArray(secureScore.EnabledServices) ? secureScore.EnabledServices : []).map((svc: string) => (
+                      <span key={svc} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-2 py-0.5 rounded-full border border-dsc-blue/20">{svc}</span>
+                    ))}
+                  </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {aiControls.length > 0 && (
+          <Card className="animate-gravity-in">
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><BarChart3 className="h-4 w-4 text-dsc-blue" />AI-Relevant Controls ({aiControls.length})</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {aiControls.map((ctrl: any, i: number) => {
+                  const props = ctrl.properties as any;
+                  const pct = props?.MaxScore > 0 ? Math.round(((props?.CurrentScore || 0) / props.MaxScore) * 100) : 0;
+                  const barColor = pct >= 80 ? "#7ECC9A" : pct >= 50 ? "#E8D07A" : "#F28B8B";
+                  return (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-dsc-bg border border-dsc-border">
+                      <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{ctrl.displayName}</p><p className="text-[9px] text-dsc-text-secondary">{props?.Service}</p></div>
+                      <div className="flex items-center gap-2 flex-shrink-0"><span className="text-xs font-bold" style={{ color: barColor }}>{pct}%</span><div className="w-14 h-2 rounded-full bg-dsc-border/30"><div className="h-2 rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: barColor }} /></div></div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Model types + Safety */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="animate-gravity-in">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Cpu className="h-4 w-4 text-dsc-blue" />Model Deployments</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[
+                { name: "Azure OpenAI", desc: "GPT-4o, GPT-4, GPT-3.5 Turbo, DALL-E, Whisper, embeddings", icon: Brain, pct: 95 },
+                { name: "Foundry Models", desc: "Llama, Mistral, Phi, Cohere — serverless or managed", icon: Network, pct: 70 },
+                { name: "Custom Models", desc: "Fine-tuned on your data with evaluation pipelines", icon: FileCode2, pct: 45 },
+                { name: "Prompt Flow", desc: "Visual LLM orchestration, RAG pipelines, evaluation", icon: Workflow, pct: 60 },
+              ].map((m) => (
+                <div key={m.name} className="flex items-center gap-3 p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <m.icon className="h-4 w-4 text-dsc-blue flex-shrink-0" />
+                  <div className="flex-1 min-w-0"><p className="text-xs font-medium">{m.name}</p><p className="text-[9px] text-dsc-text-secondary">{m.desc}</p></div>
+                  <Sparkline data={generateTrend(m.pct)} width={40} height={16} color="#B89ADA" />
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <InfoCard title="Model Deployments" icon={Cpu} color="text-dsc-blue" items={[
-          { name: "Azure OpenAI", desc: "GPT-4o, GPT-4, GPT-3.5 Turbo, DALL-E, Whisper, embeddings" },
-          { name: "Foundry Models", desc: "Llama, Mistral, Phi, Cohere — serverless or managed compute" },
-          { name: "Custom Models", desc: "Fine-tuned models trained on your data with evaluation pipelines" },
-          { name: "Prompt Flow", desc: "Visual orchestration of LLM calls, tools, and RAG pipelines" },
-        ]} />
-        <InfoCard title="AI Safety & Governance" icon={Shield} color="text-dsc-blue" items={[
-          { name: "Content Safety", desc: "Built-in filtering for hate, violence, sexual, self-harm categories" },
-          { name: "Responsible AI", desc: "Transparency notes, fairness assessments, model cards" },
-          { name: "RBAC & Networking", desc: "Role-based access, private endpoints, managed VNets, CMK" },
-          { name: "Monitoring", desc: "Azure Monitor, token usage, latency metrics, content filter logs" },
-          { name: "Rate Limiting", desc: "TPM and RPM quotas per deployment with dynamic allocation" },
-        ]} />
+        <Card className="animate-gravity-in">
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Shield className="h-4 w-4 text-dsc-blue" />AI Safety & Governance</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {[
+                { name: "Content Safety", desc: "Hate, violence, sexual, self-harm filtering", status: true },
+                { name: "Responsible AI", desc: "Transparency notes, fairness, model cards", status: true },
+                { name: "RBAC & Networking", desc: "Private endpoints, managed VNets, CMK", status: true },
+                { name: "Monitoring", desc: "Token usage, latency, content filter logs", status: true },
+                { name: "Rate Limiting", desc: "TPM/RPM quotas per deployment", status: true },
+              ].map((s) => (
+                <div key={s.name} className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <div className="flex items-center gap-2"><CheckCircle2 className={`h-3.5 w-3.5 ${s.status ? "text-dsc-green" : "text-dsc-red"} flex-shrink-0`} /><div><p className="text-xs font-medium">{s.name}</p><p className="text-[9px] text-dsc-text-secondary">{s.desc}</p></div></div>
+                  <Badge variant={s.status ? "compliant" : "error"}>{s.status ? "Active" : "Off"}</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
       <PortalLinks links={[
         { label: "AI Foundry Portal", url: "https://ai.azure.com" },
         { label: "Azure OpenAI Studio", url: "https://oai.azure.com" },
@@ -380,30 +455,105 @@ function AzureAIFoundryTab({ data }: any) {
 
 /* ─── Fabric AI Tab ────────────────────────────────────── */
 function FabricAITab() {
+  // Fabric capabilities with readiness indicators
+  const capabilities = [
+    { name: "Copilot in Notebooks", desc: "Generate Spark/Python code, explain results, fix errors, create visualizations", icon: FileCode2, ready: true, sparkData: generateTrend(88) },
+    { name: "Copilot in Power BI", desc: "Create reports from natural language, generate DAX measures, explain visuals", icon: BarChart3, ready: true, sparkData: generateTrend(92) },
+    { name: "Copilot in Data Factory", desc: "Generate data pipelines, transform data, create dataflows from descriptions", icon: Workflow, ready: true, sparkData: generateTrend(75) },
+    { name: "Copilot in SQL Analytics", desc: "Write T-SQL queries, optimize performance, generate stored procedures", icon: Cpu, ready: true, sparkData: generateTrend(80) },
+  ];
+
+  const adminSettings = [
+    { name: "Copilot Tenant Setting", desc: "Master toggle for Copilot across all Fabric workspaces", status: "enabled", critical: true },
+    { name: "Data Sent to Azure OpenAI", desc: "Controls whether workspace data is processed by Azure OpenAI", status: "enabled", critical: true },
+    { name: "Capacity Assignment", desc: "Copilot requires F64+ or P1+ capacity per workspace", status: "required", critical: false },
+    { name: "Sensitivity Label Enforcement", desc: "Copilot respects Purview labels — restricted content limits AI responses", status: "active", critical: true },
+    { name: "Cross-Geo Data Processing", desc: "Whether data can be processed in a different geography than the capacity", status: "restricted", critical: false },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="p-4 rounded-lg bg-orange-50/50 border border-orange-200/30">
-        <div className="flex items-center gap-2 mb-2"><Cpu className="h-4 w-4 text-orange-600" /><span className="text-sm font-semibold">Copilot in Microsoft Fabric</span></div>
-        <p className="text-xs text-dsc-text-secondary">AI-powered data analytics: natural language queries, auto-generated reports, data transformation, and AI-assisted modeling.</p>
+    <div className="space-y-6 stagger-children">
+      <div className="p-4 rounded-lg bg-dsc-yellow-50/30 border border-dsc-yellow/20 animate-gravity-in">
+        <div className="flex items-center gap-2 mb-2"><Cpu className="h-4 w-4 text-dsc-yellow" /><span className="text-sm font-semibold">Copilot in Microsoft Fabric</span></div>
+        <p className="text-xs text-dsc-text-secondary">AI-powered data analytics across the entire Fabric platform. Natural language queries, auto-generated reports, data transformation, and AI-assisted modeling.</p>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <InfoCard title="Copilot Capabilities" icon={Sparkles} color="text-orange-600" items={[
-          { name: "Notebooks", desc: "Generate code, explain results, fix errors using natural language" },
-          { name: "Power BI", desc: "Create reports, generate DAX, explain visuals, summarize data" },
-          { name: "Data Factory", desc: "Generate pipelines and dataflows from natural language" },
-          { name: "SQL Analytics", desc: "Write T-SQL, optimize queries, generate stored procedures" },
-        ]} />
-        <InfoCard title="Admin Settings" icon={Settings} color="text-orange-600" items={[
-          { name: "Copilot Tenant Toggle", desc: "Enable/disable Copilot across the entire Fabric tenant" },
-          { name: "Data Processing", desc: "Control whether data is sent to Azure OpenAI for processing" },
-          { name: "Capacity Requirements", desc: "Copilot requires F64+ or P1+ capacity assignment" },
-          { name: "Sensitivity Labels", desc: "Copilot respects Purview labels — restricted content limits responses" },
-        ]} />
-      </div>
+
+      {/* Capability readiness */}
+      <Card className="animate-gravity-in">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Sparkles className="h-4 w-4 text-dsc-yellow" />Copilot Capabilities</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {capabilities.map((cap) => (
+              <div key={cap.name} className="flex items-center gap-3 p-3 rounded-lg bg-dsc-bg border border-dsc-border card-hover">
+                <cap.icon className="h-5 w-5 text-dsc-yellow flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold truncate">{cap.name}</p>
+                    {cap.ready && <CheckCircle2 className="h-3 w-3 text-dsc-green flex-shrink-0" />}
+                  </div>
+                  <p className="text-[9px] text-dsc-text-secondary mt-0.5">{cap.desc}</p>
+                </div>
+                <Sparkline data={cap.sparkData} width={40} height={18} color="#E8D07A" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Admin settings with status */}
+      <Card className="animate-gravity-in">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4 text-dsc-yellow" />Admin Configuration</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {adminSettings.map((setting) => (
+              <div key={setting.name} className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border">
+                <div className="flex items-center gap-3">
+                  {setting.critical ? <Lock className="h-3.5 w-3.5 text-dsc-yellow flex-shrink-0" /> : <Settings className="h-3.5 w-3.5 text-dsc-text-secondary flex-shrink-0" />}
+                  <div>
+                    <p className="text-xs font-medium">{setting.name}</p>
+                    <p className="text-[9px] text-dsc-text-secondary">{setting.desc}</p>
+                  </div>
+                </div>
+                <Badge variant={setting.status === "enabled" || setting.status === "active" ? "compliant" : setting.status === "restricted" ? "drifted" : "default"}>
+                  {setting.status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Capacity visual */}
+      <Card className="animate-gravity-in">
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Cpu className="h-4 w-4 text-dsc-yellow" />Capacity Requirements</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { sku: "F64", label: "Fabric", desc: "Minimum for Copilot", color: "#E8D07A" },
+              { sku: "P1", label: "Premium", desc: "Power BI Premium", color: "#B89ADA" },
+              { sku: "F128+", label: "Enterprise", desc: "Full AI features", color: "#7ECC9A" },
+            ].map((cap) => (
+              <div key={cap.sku} className="text-center p-4 rounded-lg bg-dsc-bg border border-dsc-border">
+                <div className="relative h-16 w-16 mx-auto mb-2">
+                  <svg className="h-16 w-16 -rotate-90" viewBox="0 0 64 64">
+                    <circle cx="32" cy="32" r="26" fill="none" stroke="var(--color-border)" strokeWidth="5" opacity="0.3" />
+                    <circle cx="32" cy="32" r="26" fill="none" stroke={cap.color} strokeWidth="5" strokeDasharray="163 163" strokeLinecap="round" className="transition-all duration-700" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center"><span className="text-sm font-bold" style={{ color: cap.color }}>{cap.sku}</span></div>
+                </div>
+                <p className="text-xs font-medium">{cap.label}</p>
+                <p className="text-[9px] text-dsc-text-secondary">{cap.desc}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <PortalLinks links={[
         { label: "Fabric Admin Portal", url: "https://app.fabric.microsoft.com/admin-portal/tenantSettings" },
-        { label: "Copilot Settings Docs", url: "https://learn.microsoft.com/en-us/fabric/admin/service-admin-portal-copilot" },
+        { label: "Copilot Settings", url: "https://learn.microsoft.com/en-us/fabric/admin/service-admin-portal-copilot" },
         { label: "Fabric Capacities", url: "https://app.fabric.microsoft.com/admin-portal/capacities" },
+        { label: "Fabric Docs", url: "https://learn.microsoft.com/en-us/fabric/" },
       ]} />
     </div>
   );
