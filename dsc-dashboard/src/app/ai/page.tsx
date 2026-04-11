@@ -102,9 +102,9 @@ function OverviewTab({ data, t, expandedId, setExpandedId }: any) {
     <div className="space-y-6 stagger-children">
       {/* Hero metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard icon={Bot} label="Copilot Agents" value={t.agents} sub={`${t.deployedAgents} deployed`} color="purple" trend={generateTrend(agentDeployPct)} />
-        <MetricCard icon={Plug} label="Graph Connectors" value={t.connectors} sub={`${t.readyConnectors} ready`} color="blue" trend={generateTrend(connHealthPct)} />
-        <MetricCard icon={Shield} label="Service Principals" value={t.servicePrincipals} sub={`${t.enabledSPs} enabled`} color="green" trend={generateTrend(spHealthPct)} />
+        <MetricCard icon={Bot} label="Copilot Agents" value={t.agents} sub={`${t.deployedAgents} deployed`} color="purple" trend={generateTrend(agentDeployPct)} items={data?.agents} itemLabel="Copilot Agents" />
+        <MetricCard icon={Plug} label="Graph Connectors" value={t.connectors} sub={`${t.readyConnectors} ready`} color="blue" trend={generateTrend(connHealthPct)} items={data?.resources?.CopilotGraphConnector} itemLabel="Graph Connectors" />
+        <MetricCard icon={Shield} label="Service Principals" value={t.servicePrincipals} sub={`${t.enabledSPs} enabled`} color="green" trend={generateTrend(spHealthPct)} items={data?.resources?.CopilotServicePrincipal} itemLabel="AI Service Principals" />
         <MetricCard icon={ShieldCheck} label="Secure Score" value={`${scorePct}%`} sub={`${Math.round(currentScore)}/${Math.round(maxScore)}`} color="orange" trend={generateTrend(scorePct)} />
       </div>
 
@@ -213,7 +213,8 @@ function OverviewTab({ data, t, expandedId, setExpandedId }: any) {
   );
 }
 
-function MetricCard({ icon: Icon, label, value, sub, color, trend }: { icon: React.ElementType; label: string; value: string | number; sub: string; color: string; trend: number[] }) {
+function MetricCard({ icon: Icon, label, value, sub, color, trend, items, itemLabel }: { icon: React.ElementType; label: string; value: string | number; sub: string; color: string; trend: number[]; items?: any[]; itemLabel?: string }) {
+  const [open, setOpen] = useState(false);
   const colors: Record<string, { bg: string; text: string; stroke: string }> = {
     purple: { bg: "bg-purple-50", text: "text-purple-600", stroke: "#7C3AED" },
     blue: { bg: "bg-dsc-blue-50", text: "text-dsc-blue", stroke: "#3182CE" },
@@ -221,16 +222,98 @@ function MetricCard({ icon: Icon, label, value, sub, color, trend }: { icon: Rea
     orange: { bg: "bg-orange-50", text: "text-orange-600", stroke: "#D69E2E" },
   };
   const c = colors[color] || colors.purple;
+  const hasData = items && items.length > 0;
   return (
-    <Card>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className={`rounded-lg ${c.bg} p-2.5`}><Icon className={`h-5 w-5 ${c.text}`} /></div>
-          <div><p className="text-2xl font-bold">{value}</p><p className="text-xs text-dsc-text-secondary">{label}</p><p className="text-[10px] text-dsc-text-secondary">{sub}</p></div>
+    <>
+      <Card hover={hasData} className={hasData ? "cursor-pointer" : ""} onClick={() => hasData && setOpen(true)}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`rounded-lg ${c.bg} p-2.5`}><Icon className={`h-5 w-5 ${c.text}`} /></div>
+            <div><p className="text-2xl font-bold">{value}</p><p className="text-xs text-dsc-text-secondary">{label}</p><p className="text-[10px] text-dsc-text-secondary">{sub}</p></div>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <Sparkline data={trend} width={56} height={28} color={c.stroke} fillColor={c.stroke} />
+            {hasData && <span className="text-[8px] text-dsc-text-secondary">click to view</span>}
+          </div>
         </div>
-        <Sparkline data={trend} width={56} height={28} color={c.stroke} fillColor={c.stroke} />
+      </Card>
+      {hasData && (
+        <Modal open={open} onClose={() => setOpen(false)} title={`${itemLabel || label} (${items!.length})`} wide>
+          <MetricDetailList items={items!} color={c} />
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function MetricDetailList({ items, color }: { items: any[]; color: { bg: string; text: string; stroke: string } }) {
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+  return (
+    <div className="space-y-2 stagger-children">
+      {/* Summary bar */}
+      <div className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border mb-3">
+        <span className="text-sm font-medium">{items.length} items</span>
+        <div className="flex gap-2">
+          {(() => {
+            const compliant = items.filter((i) => i.status === "COMPLIANT" || i.accountEnabled !== false).length;
+            const drifted = items.length - compliant;
+            return (<>
+              <span className="text-xs text-dsc-green">{compliant} healthy</span>
+              {drifted > 0 && <span className="text-xs text-dsc-red">{drifted} issues</span>}
+            </>);
+          })()}
+        </div>
       </div>
-    </Card>
+      {/* Item list */}
+      {items.map((item, idx) => {
+        const name = item.displayName || item.name || item.id || `Item ${idx + 1}`;
+        const isOk = item.status === "COMPLIANT" || item.accountEnabled !== false;
+        const isExp = expandedIdx === idx;
+        const props = item.properties || item;
+        const simpleProps = Object.entries(props).filter(([k, v]) => v != null && typeof v !== "object" && k !== "id" && k !== "@odata.type").slice(0, 12);
+
+        return (
+          <div key={idx} className="animate-gravity-in">
+            <div
+              className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border cursor-pointer hover:border-dsc-border/80 transition-all"
+              onClick={() => setExpandedIdx(isExp ? null : idx)}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                {isOk ? <CheckCircle2 className="h-3.5 w-3.5 text-dsc-green flex-shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-dsc-red flex-shrink-0" />}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{name}</p>
+                  {item.resourceType && <p className="text-[9px] text-dsc-text-secondary">{item.resourceType}{item.workload ? ` · ${item.workload}` : ""}</p>}
+                  {item.type && !item.resourceType && <p className="text-[9px] text-dsc-text-secondary">{item.type}{item.publisher ? ` · ${item.publisher}` : ""}</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {item.status && <Badge variant={item.status === "COMPLIANT" ? "compliant" : "drifted"}>{item.status}</Badge>}
+                {item.isBlocked && <Badge variant="error">Blocked</Badge>}
+                {item.isPinned && <Badge variant="active">Pinned</Badge>}
+                {isExp ? <ChevronUp className="h-3.5 w-3.5 text-dsc-text-secondary" /> : <ChevronDown className="h-3.5 w-3.5 text-dsc-text-secondary" />}
+              </div>
+            </div>
+            {isExp && simpleProps.length > 0 && (
+              <div className="mt-1.5 ml-6 rounded-lg border border-dsc-border bg-dsc-surface p-3 animate-slide-down">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                  {simpleProps.map(([key, val]) => (
+                    <div key={key} className="p-1.5 rounded-md bg-dsc-bg border border-dsc-border/50">
+                      <p className="text-[8px] text-dsc-text-secondary uppercase tracking-wide">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                      <p className={`text-[10px] font-medium mt-0.5 ${typeof val === "boolean" ? (val ? "text-dsc-green" : "text-dsc-red") : "text-dsc-text"}`}>
+                        {typeof val === "boolean" ? (val ? "✓ Yes" : "✗ No") : String(val).substring(0, 60)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                {item.supportedHosts?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">{item.supportedHosts.map((h: string) => <span key={h} className="text-[9px] bg-dsc-blue-50 text-dsc-blue px-1.5 py-0.5 rounded-full">{h}</span>)}</div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -253,10 +336,10 @@ function Copilot365Tab({ data, t, expandedId, setExpandedId }: any) {
   return (
     <div className="space-y-6 stagger-children">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
-        <MetricCard icon={Settings} label="Admin Settings" value={copilotSettings.length} sub="Copilot config" color="purple" trend={generateTrend(80)} />
-        <MetricCard icon={Plug} label="Graph Connectors" value={connectors.length} sub={`${connectors.filter((c: any) => c.status === "COMPLIANT").length} ready`} color="blue" trend={generateTrend(connectors.length > 0 ? 90 : 0)} />
-        <MetricCard icon={MessageSquare} label="Teams AI Apps" value={teamsApps.length} sub="Copilot-related" color="green" trend={generateTrend(70)} />
-        <MetricCard icon={Key} label="OAuth Consents" value={consents.length} sub="AI app permissions" color="orange" trend={generateTrend(85)} />
+        <MetricCard icon={Settings} label="Admin Settings" value={copilotSettings.length} sub="Copilot config" color="purple" trend={generateTrend(80)} items={copilotSettings} itemLabel="Copilot Admin Settings" />
+        <MetricCard icon={Plug} label="Graph Connectors" value={connectors.length} sub={`${connectors.filter((c: any) => c.status === "COMPLIANT").length} ready`} color="blue" trend={generateTrend(connectors.length > 0 ? 90 : 0)} items={connectors} itemLabel="Graph Connectors" />
+        <MetricCard icon={MessageSquare} label="Teams AI Apps" value={teamsApps.length} sub="Copilot-related" color="green" trend={generateTrend(70)} items={teamsApps} itemLabel="Teams AI Apps" />
+        <MetricCard icon={Key} label="OAuth Consents" value={consents.length} sub="AI app permissions" color="orange" trend={generateTrend(85)} items={consents} itemLabel="OAuth Permission Grants" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -345,11 +428,11 @@ function AgentRegistryTab({ data, t }: any) {
     <div className="space-y-6 stagger-children">
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 stagger-children">
-        <MetricCard icon={Bot} label="Total Agents" value={t.agents || 0} sub={`${t.deployedAgents || 0} deployed`} color="purple" trend={generateTrend(t.agents > 0 ? 80 : 0)} />
-        <MetricCard icon={CheckCircle2} label="Deployed" value={t.deployedAgents || 0} sub={`of ${t.agents || 0}`} color="green" trend={generateTrend(t.agents > 0 ? Math.round((t.deployedAgents / t.agents) * 100) : 0)} />
-        <MetricCard icon={Sparkles} label="Pinned" value={t.pinnedAgents || 0} sub="for users" color="blue" trend={generateTrend(60)} />
-        <MetricCard icon={Shield} label="With Risks" value={t.riskyAgents || 0} sub={`${t.totalRiskCount || 0} total`} color="orange" trend={generateTrend(t.riskyAgents > 0 ? 30 : 95)} />
-        <MetricCard icon={XCircle} label="Blocked" value={t.blockedAgents || 0} sub="restricted" color="orange" trend={generateTrend(t.blockedAgents > 0 ? 20 : 98)} />
+        <MetricCard icon={Bot} label="Total Agents" value={t.agents || 0} sub={`${t.deployedAgents || 0} deployed`} color="purple" trend={generateTrend(t.agents > 0 ? 80 : 0)} items={agents} itemLabel="All Agents" />
+        <MetricCard icon={CheckCircle2} label="Deployed" value={t.deployedAgents || 0} sub={`of ${t.agents || 0}`} color="green" trend={generateTrend(t.agents > 0 ? Math.round((t.deployedAgents / t.agents) * 100) : 0)} items={deployed} itemLabel="Deployed Agents" />
+        <MetricCard icon={Sparkles} label="Pinned" value={t.pinnedAgents || 0} sub="for users" color="blue" trend={generateTrend(60)} items={pinned} itemLabel="Pinned Agents" />
+        <MetricCard icon={Shield} label="With Risks" value={t.riskyAgents || 0} sub={`${t.totalRiskCount || 0} total`} color="orange" trend={generateTrend(t.riskyAgents > 0 ? 30 : 95)} items={risky} itemLabel="Risky Agents" />
+        <MetricCard icon={XCircle} label="Blocked" value={t.blockedAgents || 0} sub="restricted" color="orange" trend={generateTrend(t.blockedAgents > 0 ? 20 : 98)} items={blocked} itemLabel="Blocked Agents" />
       </div>
 
       {/* Agent type distribution */}
@@ -504,9 +587,9 @@ function AzureAIFoundryTab({ data }: any) {
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon={ShieldCheck} label="Security Posture" value={`${scorePct}%`} sub={`${Math.round(currentScore)}/${Math.round(maxScore)}`} color="green" trend={generateTrend(scorePct)} />
-        <MetricCard icon={Shield} label="AI Service Principals" value={aiSPs.length + (t.servicePrincipals || 0)} sub={`${t.enabledSPs || 0} enabled`} color="blue" trend={generateTrend(85)} />
-        <MetricCard icon={BarChart3} label="Security Controls" value={aiControls.length} sub="AI-relevant" color="orange" trend={generateTrend(70)} />
-        <MetricCard icon={Plug} label="Graph Connectors" value={t.connectors || 0} sub="data sources" color="purple" trend={generateTrend(t.connectors > 0 ? 90 : 0)} />
+        <MetricCard icon={Shield} label="AI Service Principals" value={aiSPs.length + (t.servicePrincipals || 0)} sub={`${t.enabledSPs || 0} enabled`} color="blue" trend={generateTrend(85)} items={[...(data?.resources?.CopilotServicePrincipal || []), ...aiSPs]} itemLabel="AI Service Principals" />
+        <MetricCard icon={BarChart3} label="Security Controls" value={aiControls.length} sub="AI-relevant" color="orange" trend={generateTrend(70)} items={aiControls.map((c: any) => ({ ...c, displayName: c.displayName, status: ((c.properties as any)?.CurrentScore ?? 0) >= ((c.properties as any)?.MaxScore ?? 1) ? "COMPLIANT" : "DRIFTED" }))} itemLabel="AI Security Controls" />
+        <MetricCard icon={Plug} label="Graph Connectors" value={t.connectors || 0} sub="data sources" color="purple" trend={generateTrend(t.connectors > 0 ? 90 : 0)} items={data?.resources?.CopilotGraphConnector} itemLabel="Graph Connectors" />
       </div>
 
       {/* Secure Score + Controls */}
@@ -750,9 +833,9 @@ function CopilotSecurityTab({ data }: any) {
       {/* Security KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon={ShieldCheck} label="Secure Score" value={`${scorePct}%`} sub={`${Math.round(currentScore)}/${Math.round(maxScore)}`} color="green" trend={generateTrend(scorePct)} />
-        <MetricCard icon={Shield} label="Security Alerts" value={t.securityAlerts || 0} sub={`${t.activeAlerts || 0} active`} color="orange" trend={generateTrend(t.activeAlerts > 0 ? 40 : 90)} />
-        <MetricCard icon={Monitor} label="Incidents" value={t.securityIncidents || 0} sub={`${t.activeIncidents || 0} active`} color="purple" trend={generateTrend(t.activeIncidents > 0 ? 30 : 95)} />
-        <MetricCard icon={BarChart3} label="Controls" value={aiControls.length} sub="monitored" color="blue" trend={generateTrend(75)} />
+        <MetricCard icon={Shield} label="Security Alerts" value={t.securityAlerts || 0} sub={`${t.activeAlerts || 0} active`} color="orange" trend={generateTrend(t.activeAlerts > 0 ? 40 : 90)} items={alerts} itemLabel="Security Alerts" />
+        <MetricCard icon={Monitor} label="Incidents" value={t.securityIncidents || 0} sub={`${t.activeIncidents || 0} active`} color="purple" trend={generateTrend(t.activeIncidents > 0 ? 30 : 95)} items={incidents} itemLabel="Security Incidents" />
+        <MetricCard icon={BarChart3} label="Controls" value={aiControls.length} sub="monitored" color="blue" trend={generateTrend(75)} items={aiControls.map((c: any) => ({ ...c, displayName: c.displayName, status: ((c.properties as any)?.CurrentScore ?? 0) >= ((c.properties as any)?.MaxScore ?? 1) ? "COMPLIANT" : "DRIFTED" }))} itemLabel="Security Controls" />
       </div>
 
       {/* Secure Score Radial */}
