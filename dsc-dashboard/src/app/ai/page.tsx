@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusDot } from "@/components/ui/status-dot";
 import { Sparkline } from "@/components/ui/sparkline";
+import { Modal } from "@/components/ui/modal";
 import { timeAgo } from "@/lib/utils";
 import {
   Sparkles, Bot, Shield, ShieldCheck, Lock,
@@ -84,6 +85,7 @@ export default function AIGovernancePage() {
 
 /* ─── Overview Tab ─────────────────────────────────────── */
 function OverviewTab({ data, t, expandedId, setExpandedId }: any) {
+  const [selectedConnector, setSelectedConnector] = useState<any>(null);
   const secureScore = data?.secureScore;
   const currentScore = Number(secureScore?.CurrentScore) || 0;
   const maxScore = Number(secureScore?.MaxScore) || 1;
@@ -130,19 +132,33 @@ function OverviewTab({ data, t, expandedId, setExpandedId }: any) {
           <CardHeader><CardTitle className="text-base flex items-center gap-2"><Plug className="h-4 w-4 text-dsc-blue" />Connector Health</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {(data?.resources?.CopilotGraphConnector || []).map((c: any) => (
-                <div key={c.id} className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <div className="flex items-center gap-2">
-                    <StatusDot status={c.status} pulse={c.status !== "COMPLIANT"} />
-                    <div><p className="text-xs font-medium">{c.displayName}</p><p className="text-[10px] text-dsc-text-secondary">{(c.properties as any)?.SchemaProperties || 0} schema props</p></div>
+              {(data?.resources?.CopilotGraphConnector || []).map((c: any) => {
+                const props = c.properties as any;
+                return (
+                  <div key={c.id} className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border cursor-pointer hover:border-dsc-blue/30 transition-colors" onClick={() => setSelectedConnector(c)}>
+                    <div className="flex items-center gap-2">
+                      <StatusDot status={c.status} pulse={c.status !== "COMPLIANT"} />
+                      <div>
+                        <p className="text-xs font-medium">{c.displayName}</p>
+                        <p className="text-[10px] text-dsc-text-secondary">{props?.SchemaProperties || 0} schema props · {props?.ItemCount ?? "?"} items</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={c.status === "COMPLIANT" ? "compliant" : "drifted"}>{props?.State || c.status}</Badge>
+                      <Eye className="h-3 w-3 text-dsc-text-secondary" />
+                    </div>
                   </div>
-                  <Badge variant={c.status === "COMPLIANT" ? "compliant" : "drifted"}>{(c.properties as any)?.State || c.status}</Badge>
-                </div>
-              ))}
+                );
+              })}
               {(data?.resources?.CopilotGraphConnector || []).length === 0 && <p className="text-xs text-dsc-text-secondary text-center py-3">No Graph connectors configured</p>}
             </div>
           </CardContent>
         </Card>
+
+        {/* Connector Detail Modal */}
+        <Modal open={!!selectedConnector} onClose={() => setSelectedConnector(null)} title={selectedConnector?.displayName || "Connector Details"} wide>
+          {selectedConnector && <ConnectorDetailModal connector={selectedConnector} />}
+        </Modal>
 
         {/* Governance alerts */}
         <Card>
@@ -517,6 +533,128 @@ function PortalLinks({ links }: { links: { label: string; url: string }[] }) {
           <Card hover><div className="flex items-center gap-2"><span className="text-sm font-medium text-dsc-text">{link.label}</span><ExternalLink className="h-3 w-3 text-dsc-text-secondary ml-auto" /></div></Card>
         </a>
       ))}
+    </div>
+  );
+}
+
+/* ─── Connector Detail Modal ─────────────────────────── */
+function ConnectorDetailModal({ connector }: { connector: any }) {
+  const props = connector.properties as Record<string, unknown> || {};
+  const state = String(props.State || "unknown");
+  const schemaCount = Number(props.SchemaProperties) || 0;
+  const itemCount = props.ItemCount ?? "Unknown";
+  const connectorId = String(props.ConnectorId || props.Id || "—");
+  const description = String(props.Description || "No description");
+
+  const stateColor = state === "ready" ? "text-dsc-green" : state === "draft" ? "text-dsc-yellow" : "text-dsc-red";
+  const stateBg = state === "ready" ? "bg-dsc-green-50" : state === "draft" ? "bg-dsc-yellow-50" : "bg-dsc-red-50";
+
+  // Parse any nested config objects
+  const activitySettings = props.ActivitySettings as Record<string, unknown> | null;
+  const searchSettings = props.SearchSettings as Record<string, unknown> | null;
+  const configuration = props.Configuration as Record<string, unknown> | null;
+
+  return (
+    <div className="space-y-5">
+      {/* Status banner */}
+      <div className={`flex items-center gap-3 p-3 rounded-lg ${stateBg} border border-dsc-border/50`}>
+        <StatusDot status={connector.status} pulse={connector.status !== "COMPLIANT"} />
+        <div className="flex-1">
+          <p className={`text-sm font-semibold ${stateColor}`}>State: {state}</p>
+          <p className="text-xs text-dsc-text-secondary">{description}</p>
+        </div>
+        <Badge variant={connector.status === "COMPLIANT" ? "compliant" : "drifted"}>{connector.status}</Badge>
+      </div>
+
+      {/* Key metrics */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border text-center">
+          <div className="relative h-16 w-16 mx-auto mb-1">
+            <svg className="h-16 w-16 -rotate-90" viewBox="0 0 64 64">
+              <circle cx="32" cy="32" r="26" fill="none" stroke="#E2E8F0" strokeWidth="5" />
+              <circle cx="32" cy="32" r="26" fill="none" stroke="#3182CE" strokeWidth="5" strokeDasharray={`${Math.min(schemaCount / 20, 1) * 163} 163`} strokeLinecap="round" />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center"><span className="text-lg font-bold text-dsc-blue">{schemaCount}</span></div>
+          </div>
+          <p className="text-[10px] text-dsc-text-secondary">Schema Properties</p>
+        </div>
+        <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border text-center">
+          <p className="text-2xl font-bold text-dsc-text mt-3">{String(itemCount)}</p>
+          <p className="text-[10px] text-dsc-text-secondary mt-1">Indexed Items</p>
+        </div>
+        <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border text-center">
+          <p className="text-2xl font-bold text-dsc-green mt-3">{state === "ready" ? "✓" : "—"}</p>
+          <p className="text-[10px] text-dsc-text-secondary mt-1">Ready for Copilot</p>
+        </div>
+      </div>
+
+      {/* Connection details */}
+      <div>
+        <h4 className="text-xs font-semibold text-dsc-text-secondary uppercase tracking-wide mb-2">Connection Details</h4>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: "Connector ID", value: connectorId },
+            { label: "Connection ID", value: String(props.Id || "—") },
+            { label: "Name", value: String(props.Name || "—") },
+            { label: "State", value: state },
+          ].map((item) => (
+            <div key={item.label} className="p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
+              <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide">{item.label}</p>
+              <p className="text-xs font-mono text-dsc-text mt-0.5 break-all">{item.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Activity Settings */}
+      {activitySettings && Object.keys(activitySettings).length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-dsc-text-secondary uppercase tracking-wide mb-2">Activity Settings</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(activitySettings).filter(([, v]) => v != null).map(([key, val]) => (
+              <div key={key} className="p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
+                <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                <p className={`text-xs font-medium mt-0.5 ${typeof val === "boolean" ? (val ? "text-dsc-green" : "text-dsc-red") : "text-dsc-text"}`}>
+                  {typeof val === "boolean" ? (val ? "✓ Enabled" : "✗ Disabled") : typeof val === "object" ? JSON.stringify(val) : String(val)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Search Settings */}
+      {searchSettings && Object.keys(searchSettings).length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-dsc-text-secondary uppercase tracking-wide mb-2">Search Settings</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {Object.entries(searchSettings).filter(([, v]) => v != null).map(([key, val]) => (
+              <div key={key} className="p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
+                <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide">{key.replace(/([A-Z])/g, " $1").trim()}</p>
+                <p className="text-xs font-medium mt-0.5 text-dsc-text">{typeof val === "object" ? JSON.stringify(val) : String(val)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Configuration */}
+      {configuration && Object.keys(configuration).length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold text-dsc-text-secondary uppercase tracking-wide mb-2">Configuration</h4>
+          <pre className="code-editor bg-dsc-bg rounded-lg p-3 text-xs overflow-auto max-h-40 border border-dsc-border">
+            {JSON.stringify(configuration, null, 2)}
+          </pre>
+        </div>
+      )}
+
+      {/* Raw properties fallback */}
+      <details className="group">
+        <summary className="text-[10px] text-dsc-text-secondary cursor-pointer hover:text-dsc-blue">View raw properties</summary>
+        <pre className="code-editor bg-dsc-bg rounded-lg p-3 text-[10px] overflow-auto max-h-48 border border-dsc-border mt-2">
+          {JSON.stringify(props, null, 2)}
+        </pre>
+      </details>
     </div>
   );
 }

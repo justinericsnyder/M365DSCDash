@@ -54,6 +54,9 @@ export async function GET() {
       { name: "Copilot Limited Mode (beta)", path: "/copilot/admin/settings/limitedMode", beta: true },
       { name: "Graph Connectors", path: "/external/connections", beta: false },
       { name: "Copilot Service Principals", path: "/servicePrincipals?$filter=startswith(displayName,'Microsoft Copilot')&$top=5", beta: false },
+      { name: "Teams App Catalog", path: "/appCatalogs/teamsApps?$top=5", beta: false },
+      { name: "OAuth2 Grants (AI)", path: "/oauth2PermissionGrants?$top=5", beta: false },
+      { name: "Teams App Settings", path: "/teamwork/teamsAppSettings", beta: true },
     ];
 
     const results: Array<{ name: string; path: string; status: string; count?: number; error?: string }> = [];

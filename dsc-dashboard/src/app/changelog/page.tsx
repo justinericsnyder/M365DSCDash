@@ -20,6 +20,26 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: "3.0.0",
+    date: "April 10, 2026",
+    type: "feature",
+    title: "AI Governance Hub — Full Copilot, Foundry, Fabric, Security Coverage",
+    description: "New AI Governance page with 6 tabs covering the entire Microsoft AI ecosystem. Live data sync for Copilot settings, Graph connectors, service principals, Teams AI apps, and OAuth consents.",
+    icon: Sparkles,
+    commitHash: "a06c88e",
+    details: [
+      "Overview tab: metric cards with sparklines, agent donut chart, connector health grid, governance alerts, service principal status",
+      "Copilot for M365 tab: admin settings, Graph connectors with schema counts, Teams AI apps, OAuth consent grants — all expandable",
+      "Copilot Studio tab: agent types (declarative/custom engine/classic), 5 governance controls, portal links",
+      "Azure AI Foundry tab: Secure Score radial dial, model deployment types (OpenAI/Foundry/Custom/Prompt Flow), 5 safety controls",
+      "Copilot in Fabric tab: 4 capabilities (notebooks/Power BI/Data Factory/SQL), 4 admin settings with Purview label integration",
+      "Copilot for Security tab: security controls with progress bars from Secure Score, 5 capabilities, 5 admin configs, SCU management",
+      "New sync: Graph Connectors, Copilot Service Principals (6 filter queries), Teams AI apps, OAuth2 AI consents, Copilot Limited Mode",
+      "New API: GET /api/ai/dashboard with aggregated AI metrics",
+      "New scopes: ExternalConnection.Read.All, AppCatalog.Read.All",
+    ],
+  },
+  {
     version: "2.7.0",
     date: "April 10, 2026",
     type: "feature",
