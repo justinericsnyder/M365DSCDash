@@ -51,6 +51,12 @@ enum UserRole {
   ADMIN
 }
 
+model AppSettings {
+  id    String @id @default("global")
+  flags Json   @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
 model M365Tenant {
   id              String   @id @default(cuid())
   tenantId        String   @unique

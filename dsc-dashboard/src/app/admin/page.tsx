@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { timeAgo } from "@/lib/utils";
-import { Shield, UserCheck, UserX, Users, Clock, CheckCircle2, XCircle, Crown, Ban } from "lucide-react";
+import { Shield, UserCheck, UserX, Users, Clock, CheckCircle2, XCircle, Crown, Ban, Settings } from "lucide-react";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
@@ -27,6 +27,8 @@ export default function AdminPage() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [flags, setFlags] = useState<Record<string, boolean>>({ showNodes: true, showConfigurations: true, showImport: true });
+  const [togglingFlag, setTogglingFlag] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -40,6 +42,30 @@ export default function AdminPage() {
   }, [router]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  // Fetch feature flags
+  useEffect(() => {
+    fetch("/api/admin/flags").then((r) => r.json()).then((data) => {
+      if (data.flags) setFlags(data.flags);
+    }).catch(() => {});
+  }, []);
+
+  const handleToggleFlag = async (flag: string) => {
+    setTogglingFlag(flag);
+    try {
+      const res = await fetch("/api/admin/flags", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ flag, enabled: !flags[flag] }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setFlags(data.flags);
+        toast.success(`${flag} ${data.flags[flag] ? "enabled" : "disabled"}`);
+      } else toast.error(data.error);
+    } catch { toast.error("Failed to toggle"); }
+    finally { setTogglingFlag(null); }
+  };
 
   const handleAction = async (userId: string, action: string, label: string) => {
     if (action === "reject" && !confirm(`Are you sure you want to reject and remove this user?`)) return;
@@ -78,6 +104,35 @@ export default function AdminPage() {
         <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-green-50 p-2"><CheckCircle2 className="h-4 w-4 text-dsc-green" /></div><div><p className="text-xl font-bold">{approved.length}</p><p className="text-xs text-dsc-text-secondary">Approved</p></div></div></Card>
         <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-purple-50 p-2"><Crown className="h-4 w-4 text-purple-600" /></div><div><p className="text-xl font-bold">{users.filter((u) => u.role === "ADMIN").length}</p><p className="text-xs text-dsc-text-secondary">Admins</p></div></div></Card>
       </div>
+
+      {/* Feature Flags */}
+      <Card>
+        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4 text-dsc-text-secondary" />Page Visibility</CardTitle></CardHeader>
+        <CardContent>
+          <p className="text-xs text-dsc-text-secondary mb-3">Toggle pages on or off for all users. Disabled pages are hidden from the navigation.</p>
+          <div className="space-y-2">
+            {[
+              { flag: "showNodes", label: "Nodes", desc: "Infrastructure node management page" },
+              { flag: "showConfigurations", label: "Configurations", desc: "DSC configuration documents page" },
+              { flag: "showImport", label: "Import", desc: "DSC document import page" },
+            ].map((item) => (
+              <div key={item.flag} className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border">
+                <div>
+                  <p className="text-sm font-medium text-dsc-text">{item.label}</p>
+                  <p className="text-[10px] text-dsc-text-secondary">{item.desc}</p>
+                </div>
+                <button
+                  onClick={() => handleToggleFlag(item.flag)}
+                  disabled={togglingFlag === item.flag}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${flags[item.flag] ? "bg-dsc-green" : "bg-dsc-border"}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${flags[item.flag] ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Pending Approvals */}
       {pending.length > 0 && (
