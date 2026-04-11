@@ -51,6 +51,7 @@ const SCOPES = [
   "Channel.ReadBasic.All",                       // Teams channels
   "ExternalConnection.Read.All",                 // Graph connectors
   "AppCatalog.Read.All",                         // Teams app catalog
+  "TeamworkAppSettings.Read.All",                // Teams app settings
   "AgentCollection.Read.All",                    // Agent collections
   "AgentIdentity.Read.All",                      // Agent identities
   "AgentIdentityBlueprint.Read.All",             // Agent blueprints

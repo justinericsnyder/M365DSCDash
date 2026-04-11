@@ -523,8 +523,6 @@ async function syncM365DscViaGraph(token: string, tenantId: string): Promise<Syn
 async function syncPurviewLabels(token: string, tenantId: string): Promise<SyncResult> {
   const endpoints = [
     { path: "/security/dataSecurityAndGovernance/sensitivityLabels", beta: false, name: "v1.0 DSG" },
-    { path: "/security/informationProtection/sensitivityLabels", beta: true, name: "beta InfoProtection" },
-    { path: "/me/security/informationProtection/sensitivityLabels", beta: true, name: "beta user-scoped" },
   ];
 
   let apiAccessible = false;
@@ -627,8 +625,7 @@ async function syncPurviewLabels(token: string, tenantId: string): Promise<SyncR
 
 async function syncAgentRegistry(token: string, tenantId: string): Promise<SyncResult> {
   const endpoints = [
-    { path: "/copilot/admin/catalog/packages", beta: true, name: "Copilot packages" },
-    { path: "/appCatalogs/teamsApps?$filter=distributionMethod eq 'organization'", beta: false, name: "Teams apps fallback" },
+    { path: "/appCatalogs/teamsApps?$filter=distributionMethod eq 'organization'", beta: false, name: "Teams org apps" },
   ];
 
   for (const ep of endpoints) {
@@ -770,15 +767,14 @@ async function syncAICopilotSettings(token: string, tenantId: string): Promise<S
   }
 
   // ─── Teams App Catalog (Copilot-related apps) ─────────
-  const teamsApps = await tryGraphGet(token, "/appCatalogs/teamsApps?$expand=appDefinitions&$top=50");
-  if (teamsApps.data) {
-    for (const app of ((teamsApps.data as any).value || [])) {
-      const def = app.appDefinitions?.[0];
-      const name = def?.displayName || app.displayName || "Unknown";
+  const teamsAppsAI = await tryGraphGet(token, "/appCatalogs/teamsApps?$top=50");
+  if (teamsAppsAI.data) {
+    for (const app of ((teamsAppsAI.data as any).value || [])) {
+      const name = app.displayName || app.id || "Unknown";
       if (!name.toLowerCase().includes("copilot") && !name.toLowerCase().includes("ai") && app.distributionMethod !== "organization") continue;
       resources.push({
         workload: "TEAMS", resourceType: "CopilotTeamsApp", displayName: name,
-        properties: { Id: app.id, DisplayName: name, DistributionMethod: app.distributionMethod, ExternalId: app.externalId, Description: def?.shortDescription, Version: def?.version, PublishingState: def?.publishingState },
+        properties: { Id: app.id, DisplayName: name, DistributionMethod: app.distributionMethod, ExternalId: app.externalId },
         status: "COMPLIANT", differingProperties: [],
       });
     }
@@ -835,7 +831,7 @@ async function syncAICopilotSettings(token: string, tenantId: string): Promise<S
     }
   }
 
-  const agentIdentities = await tryGraphGet(token, "/agentIdentities", true);
+  const agentIdentities = await tryGraphGet(token, "/agentRegistry/agentIdentities", true);
   if (agentIdentities.data) {
     for (const identity of ((agentIdentities.data as any).value || [])) {
       resources.push({
@@ -847,7 +843,7 @@ async function syncAICopilotSettings(token: string, tenantId: string): Promise<S
     }
   }
 
-  const agentBlueprints = await tryGraphGet(token, "/agentIdentityBlueprints", true);
+  const agentBlueprints = await tryGraphGet(token, "/agentRegistry/agentIdentityBlueprints", true);
   if (agentBlueprints.data) {
     for (const bp of ((agentBlueprints.data as any).value || [])) {
       resources.push({

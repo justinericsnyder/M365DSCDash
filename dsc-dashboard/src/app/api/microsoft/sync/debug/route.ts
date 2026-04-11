@@ -34,7 +34,6 @@ export async function GET() {
       { name: "Group Settings", path: "/groupSettings", beta: false },
       { name: "Directory Roles", path: "/directoryRoles", beta: false },
       { name: "SPO Settings", path: "/admin/sharepoint/settings", beta: true },
-      { name: "Teams App Settings", path: "/teamwork/teamsAppSettings", beta: true },
       { name: "Joined Teams", path: "/me/joinedTeams", beta: false },
       { name: "Mailbox Settings", path: "/me/mailboxSettings", beta: false },
       { name: "My Drive", path: "/me/drive", beta: false },
@@ -42,27 +41,25 @@ export async function GET() {
       { name: "Secure Scores", path: "/security/secureScores?$top=1", beta: false },
       { name: "Intune Compliance", path: "/deviceManagement/deviceCompliancePolicies", beta: true },
       { name: "Intune Config", path: "/deviceManagement/deviceConfigurations", beta: true },
-      // Purview endpoints
-      { name: "Purview Labels (v1.0 DSG)", path: "/security/dataSecurityAndGovernance/sensitivityLabels", beta: false },
-      { name: "Purview Labels (beta InfoProt)", path: "/security/informationProtection/sensitivityLabels", beta: true },
-      { name: "Purview Labels (beta user)", path: "/me/security/informationProtection/sensitivityLabels", beta: true },
-      // Agent endpoints
-      { name: "Copilot Packages", path: "/copilot/admin/catalog/packages", beta: true },
-      { name: "Teams Apps (org)", path: "/appCatalogs/teamsApps?$filter=distributionMethod eq 'organization'", beta: false },
-      // AI / Copilot endpoints
+      // Purview
+      { name: "Purview Labels (v1.0)", path: "/security/dataSecurityAndGovernance/sensitivityLabels", beta: false },
+      // Copilot
       { name: "Copilot Limited Mode", path: "/copilot/admin/settings/limitedMode", beta: false },
-      { name: "Copilot Limited Mode (beta)", path: "/copilot/admin/settings/limitedMode", beta: true },
       { name: "Graph Connectors", path: "/external/connections", beta: false },
       { name: "Copilot Service Principals", path: "/servicePrincipals?$filter=startswith(displayName,'Microsoft Copilot')&$top=5", beta: false },
-      { name: "Teams App Catalog", path: "/appCatalogs/teamsApps?$top=5", beta: false },
-      { name: "OAuth2 Grants (AI)", path: "/oauth2PermissionGrants?$top=5", beta: false },
-      { name: "Teams App Settings", path: "/teamwork/teamsAppSettings", beta: true },
-      // Agent Identity APIs (Entra Agent ID)
+      { name: "Teams Apps", path: "/appCatalogs/teamsApps?$top=5", beta: false },
+      { name: "OAuth2 Grants", path: "/oauth2PermissionGrants?$top=10", beta: false },
+      // Agent Identity APIs
       { name: "Agent Collections", path: "/agentRegistry/agentCollections", beta: true },
       { name: "Agent Instances", path: "/agentRegistry/agentInstances", beta: true },
       { name: "Agent Card Manifests", path: "/agentRegistry/agentCardManifests", beta: true },
-      { name: "Agent Identities", path: "/agentIdentities", beta: true },
-      { name: "Agent Identity Blueprints", path: "/agentIdentityBlueprints", beta: true },
+      { name: "Agent Identities", path: "/agentRegistry/agentIdentities", beta: true },
+      { name: "Agent Blueprints", path: "/agentRegistry/agentIdentityBlueprints", beta: true },
+      // Security
+      { name: "Security Alerts", path: "/security/alerts_v2?$top=3", beta: false },
+      { name: "Security Incidents", path: "/security/incidents?$top=3", beta: false },
+      // Teams
+      { name: "Teams App Settings", path: "/teamwork/teamsAppSettings", beta: true },
     ];
 
     const results: Array<{ name: string; path: string; status: string; count?: number; error?: string }> = [];
