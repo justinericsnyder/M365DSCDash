@@ -66,7 +66,7 @@ export default function PurviewPage() {
         <h2 className="text-2xl font-bold text-dsc-text mb-2">Microsoft Purview</h2>
         <p className="text-dsc-text-secondary max-w-lg mb-2">Sensitivity Labels, Protection Scopes, and Label Drift Monitoring</p>
         <p className="text-xs text-dsc-text-secondary max-w-md mb-8">
-          Data sourced from Graph API <code className="bg-gray-100 px-1 rounded">GET /security/dataSecurityAndGovernance/sensitivityLabels</code> and <code className="bg-gray-100 px-1 rounded">POST /users/&#123;id&#125;/dataSecurityAndGovernance/protectionScopes/compute</code>
+          Data sourced from Graph API <code className="bg-dsc-border/30 px-1 rounded">GET /security/dataSecurityAndGovernance/sensitivityLabels</code> and <code className="bg-dsc-border/30 px-1 rounded">POST /users/&#123;id&#125;/dataSecurityAndGovernance/protectionScopes/compute</code>
         </p>
         <Button onClick={handleSeed} disabled={seeding} size="lg"><Database className="h-4 w-4" />{seeding ? "Loading..." : "Load Demo Data"}</Button>
       </div>
@@ -98,7 +98,7 @@ export default function PurviewPage() {
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${tab === t.key ? "border-purple-600 text-purple-600" : "border-transparent text-dsc-text-secondary hover:text-dsc-text"}`}>
-            {t.label}{t.count !== undefined && <span className="ml-1.5 text-xs bg-gray-100 px-1.5 py-0.5 rounded-full">{t.count}</span>}
+            {t.label}{t.count !== undefined && <span className="ml-1.5 text-xs bg-dsc-border/30 px-1.5 py-0.5 rounded-full">{t.count}</span>}
           </button>
         ))}
       </div>
@@ -149,7 +149,7 @@ function OverviewTab({ labels, ps, drift, labelHierarchy, recentDrifts, scopes, 
                   {label.sublabels?.length > 0 && (
                     <div className="ml-6 mt-1 space-y-1">
                       {label.sublabels.map((sub: any) => (
-                        <div key={sub.id} className="flex items-center gap-3 p-2 rounded-md bg-gray-50 border border-gray-100">
+                        <div key={sub.id} className="flex items-center gap-3 p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
                           <div className="h-3 w-3 rounded-sm flex-shrink-0" style={{ backgroundColor: sub.color || label.color || "#718096" }} />
                           <span className="text-sm text-dsc-text">{sub.displayName}</span>
                           <span className="text-[10px] text-dsc-text-secondary">P{sub.priority}</span>
@@ -231,7 +231,7 @@ function OverviewTab({ labels, ps, drift, labelHierarchy, recentDrifts, scopes, 
                         <Badge variant={d.severity.toLowerCase() as any}>{d.severity}</Badge>
                         {d.resolved && <Badge variant="compliant">Resolved</Badge>}
                       </div>
-                      <p className="text-xs text-dsc-text-secondary">{d.driftType.replace(/_/g, " ")} — <code className="bg-gray-100 px-1 rounded">{d.field}</code>: {d.previousValue} → {d.currentValue}</p>
+                      <p className="text-xs text-dsc-text-secondary">{d.driftType.replace(/_/g, " ")} — <code className="bg-dsc-border/30 px-1 rounded">{d.field}</code>: {d.previousValue} → {d.currentValue}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -254,7 +254,7 @@ function LabelsTab({ labelHierarchy, expandedLabel, setExpandedLabel }: any) {
   return (
     <div className="space-y-6">
       <div className="text-sm text-dsc-text-secondary">
-        Data from <code className="bg-gray-100 px-1 rounded">GET /security/dataSecurityAndGovernance/sensitivityLabels</code> — full label taxonomy with protection settings, scopes, and application modes.
+        Data from <code className="bg-dsc-border/30 px-1 rounded">GET /security/dataSecurityAndGovernance/sensitivityLabels</code> — full label taxonomy with protection settings, scopes, and application modes.
       </div>
       {labelHierarchy?.map((label: any) => {
         const isExpanded = expandedLabel === label.id;
@@ -293,11 +293,11 @@ function LabelsTab({ labelHierarchy, expandedLabel, setExpandedLabel }: any) {
                   <div><p className="text-xs text-dsc-text-secondary">Application Mode</p><Badge variant={label.applicationMode === "automatic" ? "critical" : label.applicationMode === "recommended" ? "medium" : "default"}>{label.applicationMode}</Badge></div>
                   <div><p className="text-xs text-dsc-text-secondary">Action Source</p><p className="font-medium">{label.actionSource}</p></div>
                   <div><p className="text-xs text-dsc-text-secondary">Applicable To</p><div className="flex flex-wrap gap-1 mt-0.5">{label.applicableTo?.map((a: string) => <span key={a} className="text-[10px] bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded">{a}</span>)}</div></div>
-                  <div><p className="text-xs text-dsc-text-secondary">Content Formats</p><div className="flex flex-wrap gap-1 mt-0.5">{label.contentFormats?.map((f: string) => <span key={f} className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded">{f}</span>)}</div></div>
+                  <div><p className="text-xs text-dsc-text-secondary">Content Formats</p><div className="flex flex-wrap gap-1 mt-0.5">{label.contentFormats?.map((f: string) => <span key={f} className="text-[10px] bg-dsc-border/30 px-1.5 py-0.5 rounded">{f}</span>)}</div></div>
                   <div><p className="text-xs text-dsc-text-secondary">Has Protection</p><p className="font-medium flex items-center gap-1">{label.hasProtection ? <><Lock className="h-3 w-3 text-dsc-blue" />Yes</> : <><Unlock className="h-3 w-3 text-gray-400" />No</>}</p></div>
                   <div><p className="text-xs text-dsc-text-secondary">Endpoint DLP</p><p className="font-medium flex items-center gap-1">{label.isEndpointProtectionEnabled ? <><Monitor className="h-3 w-3 text-orange-500" />Enabled</> : <><XCircle className="h-3 w-3 text-gray-400" />Disabled</>}</p></div>
                 </div>
-                {label.tooltip && <div className="p-3 rounded-lg bg-gray-50 border border-gray-100 text-sm text-dsc-text-secondary"><strong>Tooltip:</strong> {label.tooltip}</div>}
+                {label.tooltip && <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border/50 text-sm text-dsc-text-secondary"><strong>Tooltip:</strong> {label.tooltip}</div>}
                 {/* Sublabels */}
                 {label.sublabels?.length > 0 && (
                   <div>
@@ -341,7 +341,7 @@ function ScopesTab({ scopes }: any) {
   return (
     <div className="space-y-6">
       <div className="text-sm text-dsc-text-secondary">
-        Data from <code className="bg-gray-100 px-1 rounded">POST /users/&#123;id&#125;/dataSecurityAndGovernance/protectionScopes/compute</code> — computed DLP policy actions per user, activity, and location.
+        Data from <code className="bg-dsc-border/30 px-1 rounded">POST /users/&#123;id&#125;/dataSecurityAndGovernance/protectionScopes/compute</code> — computed DLP policy actions per user, activity, and location.
       </div>
       {/* Tenant-wide scopes */}
       <Card>
@@ -358,10 +358,10 @@ function ScopesTab({ scopes }: any) {
               </tr></thead>
               <tbody className="divide-y divide-dsc-border">
                 {tenantScopes.map((s: any) => (
-                  <tr key={s.id} className="hover:bg-gray-50">
+                  <tr key={s.id} className="hover:bg-dsc-bg">
                     <td className="py-2.5 px-3 font-medium">{s.locationValue || "All"}</td>
                     <td className="py-2.5 px-3">{s.locationType === "policyLocationDomain" ? <span className="flex items-center gap-1"><Globe className="h-3 w-3" />Domain</span> : s.locationType === "policyLocationUrl" ? <span className="flex items-center gap-1"><Link2 className="h-3 w-3" />URL</span> : <span className="flex items-center gap-1"><AppWindow className="h-3 w-3" />App</span>}</td>
-                    <td className="py-2.5 px-3"><div className="flex flex-wrap gap-1">{s.activities.map((a: string) => <span key={a} className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded">{a}</span>)}</div></td>
+                    <td className="py-2.5 px-3"><div className="flex flex-wrap gap-1">{s.activities.map((a: string) => <span key={a} className="text-[10px] bg-dsc-border/30 px-1.5 py-0.5 rounded">{a}</span>)}</div></td>
                     <td className="py-2.5 px-3"><Badge variant={s.executionMode === "evaluateInline" ? "active" : "medium"}>{s.executionMode === "evaluateInline" ? "Inline" : "Offline"}</Badge></td>
                     <td className="py-2.5 px-3">{s.restrictionAction === "block" ? <Badge variant="error"><Ban className="h-3 w-3 mr-0.5" />Block</Badge> : s.restrictionAction === "audit" ? <Badge variant="medium"><Eye className="h-3 w-3 mr-0.5" />Audit</Badge> : <Badge variant="default">Evaluate</Badge>}</td>
                   </tr>
@@ -386,10 +386,10 @@ function ScopesTab({ scopes }: any) {
               </tr></thead>
               <tbody className="divide-y divide-dsc-border">
                 {userScopes.map((s: any) => (
-                  <tr key={s.id} className="hover:bg-gray-50">
+                  <tr key={s.id} className="hover:bg-dsc-bg">
                     <td className="py-2.5 px-3 font-medium">{s.userDisplayName}</td>
                     <td className="py-2.5 px-3 text-dsc-text-secondary">{s.locationValue || "All"}</td>
-                    <td className="py-2.5 px-3"><div className="flex flex-wrap gap-1">{s.activities.map((a: string) => <span key={a} className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded">{a}</span>)}</div></td>
+                    <td className="py-2.5 px-3"><div className="flex flex-wrap gap-1">{s.activities.map((a: string) => <span key={a} className="text-[10px] bg-dsc-border/30 px-1.5 py-0.5 rounded">{a}</span>)}</div></td>
                     <td className="py-2.5 px-3"><Badge variant={s.executionMode === "evaluateInline" ? "active" : "medium"}>{s.executionMode === "evaluateInline" ? "Inline" : "Offline"}</Badge></td>
                     <td className="py-2.5 px-3">{s.restrictionAction === "block" ? <Badge variant="error"><Ban className="h-3 w-3 mr-0.5" />Block</Badge> : <Badge variant="default">Evaluate</Badge>}</td>
                   </tr>
@@ -455,7 +455,7 @@ function DriftSection({ title, drifts, expandedDrift, setExpandedDrift, onResolv
                 </div>
                 {isExp && (
                   <div className="ml-6 mt-2 grid grid-cols-3 gap-3">
-                    <div><p className="text-xs text-dsc-text-secondary mb-1">Field Changed</p><code className="text-xs bg-gray-100 px-2 py-1 rounded">{d.field}</code></div>
+                    <div><p className="text-xs text-dsc-text-secondary mb-1">Field Changed</p><code className="text-xs bg-dsc-border/30 px-2 py-1 rounded">{d.field}</code></div>
                     <div><p className="text-xs text-dsc-text-secondary mb-1">Previous Value</p><pre className="code-editor bg-dsc-green-50 rounded p-2 text-xs border border-dsc-green/20">{d.previousValue}</pre></div>
                     <div><p className="text-xs text-dsc-text-secondary mb-1">Current Value</p><pre className="code-editor bg-dsc-red-50 rounded p-2 text-xs border border-dsc-red/20">{d.currentValue}</pre></div>
                   </div>
@@ -468,3 +468,4 @@ function DriftSection({ title, drifts, expandedDrift, setExpandedDrift, onResolv
     </Card>
   );
 }
+

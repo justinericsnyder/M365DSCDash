@@ -437,7 +437,7 @@ function CopilotSecurityTab({ data }: any) {
                 return (
                   <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
                     <div className="min-w-0 flex-1"><p className="text-xs font-medium truncate">{ctrl.displayName}</p><p className="text-[9px] text-dsc-text-secondary">{props?.Service} · {props?.ControlCategory}</p></div>
-                    <div className="flex items-center gap-2 flex-shrink-0"><span className={`text-xs font-bold ${color}`}>{pct}%</span><div className="w-12 h-1.5 rounded-full bg-gray-100"><div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: pct >= 80 ? "#38A169" : pct >= 50 ? "#D69E2E" : "#E53E3E" }} /></div></div>
+                    <div className="flex items-center gap-2 flex-shrink-0"><span className={`text-xs font-bold ${color}`}>{pct}%</span><div className="w-12 h-1.5 rounded-full bg-dsc-border/30"><div className="h-1.5 rounded-full" style={{ width: `${pct}%`, backgroundColor: pct >= 80 ? "#38A169" : pct >= 50 ? "#D69E2E" : "#E53E3E" }} /></div></div>
                   </div>
                 );
               })}
@@ -489,7 +489,7 @@ function ResourceList({ items, expandedId, setExpandedId }: { items: any[]; expa
               <div className="flex items-center gap-1.5"><StatusDot status={res.status} />{isExp ? <ChevronUp className="h-3 w-3 text-dsc-text-secondary" /> : <ChevronDown className="h-3 w-3 text-dsc-text-secondary" />}</div>
             </div>
             {isExp && simpleProps.length > 0 && (
-              <div className="mt-1 ml-5 rounded-lg border border-dsc-border bg-white p-2.5">
+              <div className="mt-1 ml-5 rounded-lg border border-dsc-border bg-dsc-surface p-2.5">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {simpleProps.map(([key, val]) => (
                     <div key={key} className="p-1.5 rounded-md bg-dsc-bg border border-dsc-border/50">
@@ -658,3 +658,4 @@ function ConnectorDetailModal({ connector }: { connector: any }) {
     </div>
   );
 }
+

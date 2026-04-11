@@ -369,7 +369,7 @@ export default function ChangelogPage() {
             return (
               <div key={i} className="relative pl-12">
                 {/* Timeline dot */}
-                <div className="absolute left-0 top-6 h-10 w-10 rounded-full bg-white border-2 border-dsc-border flex items-center justify-center z-10">
+                <div className="absolute left-0 top-6 h-10 w-10 rounded-full bg-dsc-surface border-2 border-dsc-border flex items-center justify-center z-10">
                   <Icon className="h-4 w-4 text-dsc-blue" />
                 </div>
 
@@ -416,3 +416,4 @@ export default function ChangelogPage() {
     </div>
   );
 }
+

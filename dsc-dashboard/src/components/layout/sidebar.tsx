@@ -44,7 +44,7 @@ export function Sidebar() {
       {/* Logo */}
       <div className="flex h-16 items-center justify-between border-b border-dsc-border px-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-dsc-blue to-dsc-green">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#8B3A5C] to-[#B89ADA]">
             <Blocks className="h-4 w-4 text-white" />
           </div>
           <div>
@@ -53,7 +53,7 @@ export function Sidebar() {
           </div>
         </div>
         {/* Mobile close button */}
-        <button onClick={() => setOpen(false)} className="lg:hidden p-1 rounded-md hover:bg-gray-100">
+        <button onClick={() => setOpen(false)} className="lg:hidden p-1 rounded-md hover:bg-dsc-border/30">
           <X className="h-5 w-5 text-dsc-text-secondary" />
         </button>
       </div>
@@ -126,4 +126,5 @@ export function Sidebar() {
     </>
   );
 }
+
 

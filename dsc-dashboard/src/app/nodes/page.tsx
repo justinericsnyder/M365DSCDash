@@ -83,7 +83,7 @@ export default function NodesPage() {
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-dsc-text">Platform</label>
                 <select
-                  className="flex h-9 w-full rounded-lg border border-dsc-border bg-white px-3 py-1 text-sm"
+                  className="flex h-9 w-full rounded-lg border border-dsc-border bg-dsc-surface px-3 py-1 text-sm"
                   value={newNode.platform}
                   onChange={(e) => setNewNode({ ...newNode, platform: e.target.value })}
                 >
@@ -109,13 +109,13 @@ export default function NodesPage() {
           <input
             type="text"
             placeholder="Search nodes..."
-            className="h-9 w-full rounded-lg border border-dsc-border bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue"
+            className="h-9 w-full rounded-lg border border-dsc-border bg-dsc-surface pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <select
-          className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm"
+          className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -127,7 +127,7 @@ export default function NodesPage() {
           <option value="OFFLINE">Offline</option>
         </select>
         <select
-          className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm"
+          className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm"
           value={platformFilter}
           onChange={(e) => setPlatformFilter(e.target.value)}
         >
@@ -209,3 +209,4 @@ export default function NodesPage() {
     </div>
   );
 }
+

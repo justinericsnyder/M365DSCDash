@@ -118,7 +118,7 @@ resources:
       {/* Filters */}
       <div className="flex gap-3">
         <select
-          className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm"
+          className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -180,7 +180,7 @@ resources:
                         {resourceTypes.map((rt) => (
                           <span
                             key={rt}
-                            className="inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-0.5 text-xs text-dsc-text-secondary border border-gray-100"
+                            className="inline-flex items-center gap-1 rounded-md bg-dsc-bg px-2 py-0.5 text-xs text-dsc-text-secondary border border-dsc-border/50"
                           >
                             <Blocks className="h-3 w-3" />
                             {rt}
@@ -202,7 +202,7 @@ resources:
                           )}
                         </div>
                         <p className="text-xs text-dsc-text-secondary">resources</p>
-                        <div className="h-1.5 w-20 rounded-full bg-gray-100 mt-1">
+                        <div className="h-1.5 w-20 rounded-full bg-dsc-border/30 mt-1">
                           <div
                             className="h-1.5 rounded-full bg-dsc-green transition-all"
                             style={{ width: `${resPct}%` }}
@@ -231,3 +231,4 @@ resources:
     </div>
   );
 }
+

@@ -1,33 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  /* Dark Red-Mauve Theme — WCAG AA Compliant */
-  /* All text/bg pairs meet 4.5:1 contrast minimum */
-  /* Large text (18px+/14px bold) meets 3:1 minimum */
+  /* Dark Crimson-Mauve Theme — Soft Deep Mauve-Red Accents */
 
-  /* Accent colors — boosted for dark bg contrast */
-  --color-red: #FC8181;          /* 5.2:1 on surface */
-  --color-red-light: #4A2030;
-  --color-red-50: #2D1520;
-  --color-blue: #7CC4FA;         /* 6.1:1 on surface */
-  --color-blue-light: #1A3A5C;
-  --color-blue-50: #152A42;
-  --color-green: #7EE2A8;        /* 6.8:1 on surface */
-  --color-green-light: #1A3A2A;
-  --color-green-50: #152D22;
-  --color-yellow: #FAE87E;       /* 9.2:1 on surface */
-  --color-yellow-light: #3D3520;
-  --color-yellow-50: #2D2818;
+  /* Accent colors — mauve-red tinted */
+  --color-red: #F28B8B;
+  --color-red-light: #501820;
+  --color-red-50: #3A0E14;
+  --color-blue: #B89ADA;
+  --color-blue-light: #2A1E3A;
+  --color-blue-50: #221830;
+  --color-green: #7ECC9A;
+  --color-green-light: #1E2C22;
+  --color-green-50: #18241C;
+  --color-yellow: #E8D07A;
+  --color-yellow-light: #382818;
+  --color-yellow-50: #2E2010;
 
-  /* Backgrounds */
-  --color-bg: #1C1520;           /* deepest layer */
-  --color-surface: #2A1E2E;      /* cards, panels */
-  --color-border: #4A2E42;       /* 2.1:1 on surface — visible but subtle */
-  --color-sidebar: #211828;
+  /* Backgrounds — deep crimson-mauve */
+  --color-bg: #1A0C12;
+  --color-surface: #2C1420;
+  --color-border: #5A2438;
+  --color-sidebar: #20101A;
 
-  /* Text — WCAG AA verified */
-  --color-text: #F2E8EE;         /* 11.2:1 on bg, 8.5:1 on surface */
-  --color-text-secondary: #C4A8B8; /* 5.6:1 on bg, 4.5:1 on surface — AA pass */
+  /* Text */
+  --color-text: #F8EEF2;
+  --color-text-secondary: #D4A0B4;
 }
 
 @theme {
@@ -60,15 +58,15 @@ body {
 /* Smooth scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #5A3A50; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #7A5068; }
+::-webkit-scrollbar-thumb { background: #6A2840; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #8A3858; }
 
 /* Card hover — weighty with gravity */
 .card-hover {
   transition: box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .card-hover:hover {
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3), 0 2px 8px rgba(140,50,80,0.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35), 0 2px 8px rgba(140,40,70,0.2);
   transform: translateY(-3px);
 }
 .card-hover:active {
@@ -131,8 +129,8 @@ body {
   font-size: 13px;
   line-height: 1.6;
   tab-size: 2;
-  background-color: #1E1520;
-  color: #D4BEC8;  /* 5.8:1 on code bg */
+  background-color: #1E0E16;
+  color: #D8B8C8;
 }
 
 /* Override white backgrounds for dark mode */

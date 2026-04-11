@@ -201,7 +201,7 @@ export default function M365Page() {
         <h3 className="text-lg font-semibold text-dsc-text mb-3">Workload Compliance</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Object.entries(workloads || {}).map(([key, wl]) => {
-            const meta = WORKLOAD_META[key] || { label: key, icon: Cloud, color: "text-gray-600", bgColor: "bg-gray-50" };
+            const meta = WORKLOAD_META[key] || { label: key, icon: Cloud, color: "text-dsc-text-secondary", bgColor: "bg-dsc-bg" };
             const Icon = meta.icon;
             const pct = wl.total > 0 ? Math.round((wl.compliant / wl.total) * 100) : 100;
             return (
@@ -219,7 +219,7 @@ export default function M365Page() {
                     </div>
                     <ChevronRight className="h-4 w-4 text-dsc-text-secondary" />
                   </div>
-                  <div className="h-2 rounded-full bg-gray-100">
+                  <div className="h-2 rounded-full bg-dsc-border/30">
                     <div
                       className={`h-2 rounded-full transition-all ${pct === 100 ? "bg-dsc-green" : pct >= 80 ? "bg-dsc-yellow" : "bg-dsc-red"}`}
                       style={{ width: `${pct}%` }}
@@ -283,3 +283,4 @@ export default function M365Page() {
     </div>
   );
 }
+

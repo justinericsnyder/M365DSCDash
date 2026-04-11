@@ -17,7 +17,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         id={id}
         className={cn(
-          "flex min-h-[120px] w-full rounded-lg border border-dsc-border bg-white px-3 py-2 text-sm shadow-sm transition-colors",
+          "flex min-h-[120px] w-full rounded-lg border border-dsc-border bg-dsc-surface px-3 py-2 text-sm shadow-sm transition-colors",
           "placeholder:text-dsc-text-secondary/60",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dsc-blue focus-visible:border-dsc-blue",
           "disabled:cursor-not-allowed disabled:opacity-50",
@@ -32,3 +32,4 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   )
 );
 Textarea.displayName = "Textarea";
+

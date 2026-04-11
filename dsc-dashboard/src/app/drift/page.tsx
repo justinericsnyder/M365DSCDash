@@ -85,15 +85,15 @@ export default function DriftPage() {
           const Icon = meta.icon;
           return (
             <button key={src} onClick={() => setSourceFilter(sourceFilter === src ? "" : src)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${sourceFilter === src ? "bg-dsc-blue-50 border-dsc-blue/30 text-dsc-blue" : "bg-white border-dsc-border text-dsc-text-secondary hover:bg-gray-50"}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${sourceFilter === src ? "bg-dsc-blue-50 border-dsc-blue/30 text-dsc-blue" : "bg-dsc-surface border-dsc-border text-dsc-text-secondary hover:bg-dsc-bg"}`}>
               <Icon className={`h-3 w-3 ${meta.color}`} />{meta.label} <span className="font-bold">{String(count)}</span>
             </button>
           );
         })}
-        <select className="h-8 rounded-lg border border-dsc-border bg-white px-3 text-xs" value={resolvedFilter} onChange={(e) => setResolvedFilter(e.target.value)}>
+        <select className="h-8 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-xs" value={resolvedFilter} onChange={(e) => setResolvedFilter(e.target.value)}>
           <option value="false">Unresolved</option><option value="true">Resolved</option><option value="">All</option>
         </select>
-        <select className="h-8 rounded-lg border border-dsc-border bg-white px-3 text-xs" value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
+        <select className="h-8 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-xs" value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}>
           <option value="">All Severities</option><option value="CRITICAL">Critical</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option>
         </select>
       </div>
@@ -167,7 +167,7 @@ export default function DriftPage() {
                           <div className="bg-dsc-bg px-4 py-2.5 flex items-center gap-2">
                             <AlertTriangle className="h-4 w-4 text-dsc-red flex-shrink-0" />
                             <span className="font-semibold text-sm text-dsc-text">{explanation.setting}</span>
-                            <code className="text-[10px] bg-gray-200 px-1.5 py-0.5 rounded font-mono">{prop}</code>
+                            <code className="text-[10px] bg-dsc-border/50 px-1.5 py-0.5 rounded font-mono">{prop}</code>
                           </div>
 
                           <div className="p-4 space-y-3">
@@ -189,7 +189,7 @@ export default function DriftPage() {
 
                             {/* Arrow showing the drift direction */}
                             {desiredVal !== undefined && actualVal !== undefined && (
-                              <div className="flex items-center gap-2 text-sm text-dsc-text-secondary bg-gray-50 rounded-lg p-2.5">
+                              <div className="flex items-center gap-2 text-sm text-dsc-text-secondary bg-dsc-bg rounded-lg p-2.5">
                                 <span className="font-mono text-dsc-green">{formatValue(desiredVal)}</span>
                                 <ArrowRight className="h-4 w-4 text-dsc-red" />
                                 <span className="font-mono text-dsc-red">{formatValue(actualVal)}</span>
@@ -261,3 +261,4 @@ function formatValue(val: unknown): string {
   if (typeof val === "object") return JSON.stringify(val);
   return String(val);
 }
+

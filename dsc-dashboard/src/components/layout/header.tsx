@@ -125,7 +125,7 @@ export function Header() {
               onClick={() => setShowMenu(!showMenu)}
               className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-dsc-bg transition-colors"
             >
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-dsc-blue to-dsc-green flex items-center justify-center text-white text-xs font-bold">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#8B3A5C] to-[#B89ADA] flex items-center justify-center text-white text-xs font-bold">
                 {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
               </div>
               <div className="text-left hidden sm:block">

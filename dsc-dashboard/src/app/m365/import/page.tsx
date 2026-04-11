@@ -108,13 +108,13 @@ export default function M365ImportPage() {
         <CardContent>
           <div className="space-y-3 text-sm text-dsc-text-secondary">
             <p>1. Export your tenant configuration:</p>
-            <pre className="code-editor bg-white rounded-lg p-3 text-xs border border-dsc-border overflow-x-auto">
+            <pre className="code-editor bg-dsc-surface rounded-lg p-3 text-xs border border-dsc-border overflow-x-auto">
 {`Export-M365DSCConfiguration -Credential $cred \\
   -Components @("AADConditionalAccessPolicy","EXOOrganizationConfig","SPOTenantSettings","TeamsMeetingPolicy") \\
   -Path C:\\DSC -FileName "TenantConfig.ps1"`}
             </pre>
             <p>2. Generate the JSON report:</p>
-            <pre className="code-editor bg-white rounded-lg p-3 text-xs border border-dsc-border overflow-x-auto">
+            <pre className="code-editor bg-dsc-surface rounded-lg p-3 text-xs border border-dsc-border overflow-x-auto">
 {`New-M365DSCReportFromConfiguration \\
   -Type JSON \\
   -ConfigurationPath "C:\\DSC\\TenantConfig.ps1" \\
@@ -189,7 +189,7 @@ export default function M365ImportPage() {
               <p className="text-sm text-dsc-text-secondary mb-3">Drop a .json file here</p>
               <input type="file" accept=".json" onChange={handleFileUpload} className="hidden" id="m365-upload" />
               <label htmlFor="m365-upload" className="cursor-pointer">
-                <span className="inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium border border-dsc-border bg-white text-dsc-text hover:bg-gray-50 h-8 px-3">
+                <span className="inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium border border-dsc-border bg-dsc-surface text-dsc-text hover:bg-dsc-bg h-8 px-3">
                   Choose File
                 </span>
               </label>
@@ -208,3 +208,4 @@ export default function M365ImportPage() {
     </div>
   );
 }
+

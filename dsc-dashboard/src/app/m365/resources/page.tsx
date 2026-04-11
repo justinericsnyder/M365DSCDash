@@ -125,13 +125,13 @@ function M365ResourcesContent() {
           <input
             type="text"
             placeholder="Search resources..."
-            className="h-9 w-full rounded-lg border border-dsc-border bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue"
+            className="h-9 w-full rounded-lg border border-dsc-border bg-dsc-surface pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <select
-          className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm"
+          className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm"
           value={workloadFilter}
           onChange={(e) => setWorkloadFilter(e.target.value)}
         >
@@ -141,7 +141,7 @@ function M365ResourcesContent() {
           ))}
         </select>
         <select
-          className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm"
+          className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -175,7 +175,7 @@ function M365ResourcesContent() {
       ) : (
         <div className="space-y-4">
           {Object.values(grouped).map((group) => {
-            const meta = WORKLOAD_META[group.workload] || { label: group.workload, icon: Cloud, color: "text-gray-600" };
+            const meta = WORKLOAD_META[group.workload] || { label: group.workload, icon: Cloud, color: "text-dsc-text-secondary" };
             const Icon = meta.icon;
             const compliant = group.items.filter((r) => r.status === "COMPLIANT").length;
 
@@ -282,7 +282,7 @@ function OneDriveMetrics({ properties }: { properties: Record<string, unknown> }
   const strokeDasharray = `${(usedPct / 100) * circumference} ${circumference}`;
 
   return (
-    <div className="rounded-xl border border-dsc-border bg-white p-5">
+    <div className="rounded-xl border border-dsc-border bg-dsc-surface p-5">
       <div className="flex flex-col sm:flex-row items-start gap-6">
         {/* Radial Dial */}
         <div className="flex-shrink-0 mx-auto sm:mx-0">
@@ -327,7 +327,7 @@ function OneDriveMetrics({ properties }: { properties: Record<string, unknown> }
               <span>{usedGB.toFixed(2)} GB of {totalGB.toFixed(1)} GB</span>
               <span>{remainingGB.toFixed(1)} GB free</span>
             </div>
-            <div className="h-2.5 rounded-full bg-gray-100">
+            <div className="h-2.5 rounded-full bg-dsc-border/30">
               <div className="h-2.5 rounded-full transition-all duration-700" style={{ width: `${Math.min(usedPct, 100)}%`, backgroundColor: dialColor }} />
             </div>
           </div>
@@ -402,11 +402,11 @@ function SecureScoreMetrics({ properties }: { properties: Record<string, unknown
     for (const [key, style] of Object.entries(serviceColors)) {
       if (svc.toLowerCase().includes(key.toLowerCase())) return style;
     }
-    return "bg-gray-50 text-gray-600 border-gray-200";
+    return "bg-dsc-bg text-dsc-text-secondary border-dsc-border";
   };
 
   return (
-    <div className="rounded-xl border border-dsc-border bg-white p-5">
+    <div className="rounded-xl border border-dsc-border bg-dsc-surface p-5">
       <div className="flex flex-col sm:flex-row items-start gap-6">
         {/* Radial Dial */}
         <div className="flex-shrink-0 mx-auto sm:mx-0">
@@ -452,7 +452,7 @@ function SecureScoreMetrics({ properties }: { properties: Record<string, unknown
               <span>{Math.round(currentScore)} / {Math.round(maxScore)} points</span>
               <span>{(maxScore - currentScore).toFixed(0)} points available</span>
             </div>
-            <div className="h-2.5 rounded-full bg-gray-100">
+            <div className="h-2.5 rounded-full bg-dsc-border/30">
               <div className="h-2.5 rounded-full transition-all duration-700" style={{ width: `${Math.min(scorePct, 100)}%`, backgroundColor: dialColor }} />
             </div>
           </div>
@@ -538,7 +538,7 @@ function ResourceDetail({ resource }: { resource: M365Resource }) {
   };
 
   return (
-    <div className="rounded-xl border border-dsc-border bg-white p-4 space-y-4">
+    <div className="rounded-xl border border-dsc-border bg-dsc-surface p-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -546,7 +546,7 @@ function ResourceDetail({ resource }: { resource: M365Resource }) {
           <Badge variant={hasDrift ? "drifted" : "compliant"}>{resource.status}</Badge>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded font-mono">{resource.resourceType}</span>
+          <span className="text-[10px] bg-dsc-border/30 px-2 py-0.5 rounded font-mono">{resource.resourceType}</span>
           <span className="text-[10px] text-dsc-text-secondary">{resource.workload}</span>
         </div>
       </div>
@@ -609,7 +609,7 @@ function ResourceDetail({ resource }: { resource: M365Resource }) {
                   <p className="text-[10px] text-dsc-text-secondary font-medium uppercase tracking-wide mb-2">{key.replace(/([A-Z])/g, " $1").trim()}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                     {subEntries.map(([subKey, subVal]) => (
-                      <div key={subKey} className="flex items-center justify-between bg-white rounded px-2 py-1 border border-dsc-border/50">
+                      <div key={subKey} className="flex items-center justify-between bg-dsc-surface rounded px-2 py-1 border border-dsc-border/50">
                         <span className="text-[10px] text-dsc-text-secondary truncate mr-2">{subKey.replace(/([A-Z])/g, " $1").trim()}</span>
                         <span className={`text-xs font-medium ${typeof subVal === "boolean" ? boolColor(subVal) : "text-dsc-text"}`}>
                           {typeof subVal === "boolean" ? (subVal ? "✓ Yes" : "✗ No") : String(subVal)}
@@ -638,3 +638,4 @@ function ResourceDetail({ resource }: { resource: M365Resource }) {
     </div>
   );
 }
+

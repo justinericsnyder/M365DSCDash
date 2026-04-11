@@ -57,7 +57,7 @@ export default function ResourcesPage() {
           const Icon = meta.icon;
           return (
             <button key={src} onClick={() => setSourceFilter(sourceFilter === src ? "" : src)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${sourceFilter === src ? "bg-dsc-blue-50 border-dsc-blue/30 text-dsc-blue" : "bg-white border-dsc-border text-dsc-text-secondary hover:bg-gray-50"}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${sourceFilter === src ? "bg-dsc-blue-50 border-dsc-blue/30 text-dsc-blue" : "bg-dsc-surface border-dsc-border text-dsc-text-secondary hover:bg-dsc-bg"}`}>
               <Icon className={`h-3 w-3 ${meta.color}`} />{meta.label} <span className="font-bold">{String(count)}</span>
             </button>
           );
@@ -68,8 +68,8 @@ export default function ResourcesPage() {
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <Filter className="h-4 w-4 text-dsc-text-secondary" />
-        <input type="text" placeholder="Filter by resource type..." className="h-9 w-48 sm:w-64 rounded-lg border border-dsc-border bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} />
-        <select className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm" value={complianceFilter} onChange={(e) => setComplianceFilter(e.target.value)}>
+        <input type="text" placeholder="Filter by resource type..." className="h-9 w-48 sm:w-64 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} />
+        <select className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm" value={complianceFilter} onChange={(e) => setComplianceFilter(e.target.value)}>
           <option value="">All States</option>
           <option value="true">Compliant</option>
           <option value="false">Drifted</option>
@@ -140,10 +140,10 @@ function UnifiedResourceItem({ res }: { res: any }) {
       </div>
 
       {expanded && (
-        <div className="mt-2 ml-6 rounded-lg border border-dsc-border bg-white p-3 space-y-3">
+        <div className="mt-2 ml-6 rounded-lg border border-dsc-border bg-dsc-surface p-3 space-y-3">
           {/* Header */}
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded font-mono">{res.resourceType}</span>
+            <span className="text-[10px] bg-dsc-border/30 px-2 py-0.5 rounded font-mono">{res.resourceType}</span>
             <Badge variant={res.status === "COMPLIANT" ? "compliant" : "drifted"}>{res.status}</Badge>
             {res.source && <span className="text-[10px] text-dsc-text-secondary">{res.source}</span>}
           </div>
@@ -179,7 +179,7 @@ function UnifiedResourceItem({ res }: { res: any }) {
                   <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide mb-1">{key.replace(/([A-Z])/g, " $1").trim()}</p>
                   <div className="grid grid-cols-2 gap-1">
                     {subEntries.slice(0, 8).map(([sk, sv]) => (
-                      <div key={sk} className="flex justify-between bg-white rounded px-1.5 py-0.5 text-[10px]">
+                      <div key={sk} className="flex justify-between bg-dsc-surface rounded px-1.5 py-0.5 text-[10px]">
                         <span className="text-dsc-text-secondary truncate mr-1">{sk.replace(/([A-Z])/g, " $1").trim()}</span>
                         <span className={`font-medium ${typeof sv === "boolean" ? boolColor(sv) : "text-dsc-text"}`}>{typeof sv === "boolean" ? (sv ? "✓" : "✗") : String(sv).substring(0, 30)}</span>
                       </div>
@@ -195,3 +195,4 @@ function UnifiedResourceItem({ res }: { res: any }) {
     </div>
   );
 }
+

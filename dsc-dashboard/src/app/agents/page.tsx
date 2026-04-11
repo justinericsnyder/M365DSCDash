@@ -132,7 +132,7 @@ export default function AgentsPage() {
         <h2 className="text-2xl font-bold text-dsc-text mb-2">Agent 365 Registry</h2>
         <p className="text-dsc-text-secondary max-w-lg mb-8">
           View and manage Copilot agents across your tenant — Microsoft, external partner, custom, and shared agents.
-          Data sourced from the Graph API <code className="text-xs bg-gray-100 px-1 rounded">GET /beta/copilot/admin/catalog/packages</code>.
+          Data sourced from the Graph API <code className="text-xs bg-dsc-border/30 px-1 rounded">GET /beta/copilot/admin/catalog/packages</code>.
         </p>
         <Button onClick={handleSeed} disabled={seeding} size="lg">
           <Database className="h-4 w-4" />{seeding ? "Loading..." : "Load Demo Agents"}
@@ -153,7 +153,7 @@ export default function AgentsPage() {
             <Badge variant="active">{dashboard.tenant?.displayName}</Badge>
           </div>
           <p className="text-sm text-dsc-text-secondary mt-1">
-            {t.total} agents · via Graph API <code className="text-xs bg-gray-100 px-1 rounded">/beta/copilot/admin/catalog/packages</code>
+            {t.total} agents · via Graph API <code className="text-xs bg-dsc-border/30 px-1 rounded">/beta/copilot/admin/catalog/packages</code>
           </p>
         </div>
         <div className="flex gap-2">
@@ -254,7 +254,7 @@ export default function AgentsPage() {
                         {agent.riskCount > 0 && <Badge variant="critical">{agent.riskCount} risks</Badge>}
                         <Badge variant={meta.label.toLowerCase() as "default"}>{meta.label}</Badge>
                         {agent.supportedHosts.map((h) => (
-                          <span key={h} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{h}</span>
+                          <span key={h} className="text-[10px] bg-dsc-border/30 text-dsc-text-secondary px-1.5 py-0.5 rounded">{h}</span>
                         ))}
                         <span className="text-xs text-dsc-text-secondary">{timeAgo(agent.lastModifiedDateTime)}</span>
                       </div>
@@ -271,22 +271,22 @@ export default function AgentsPage() {
           <div className="flex flex-wrap gap-3">
             <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dsc-text-secondary" />
-              <input type="text" placeholder="Search agents..." className="h-9 w-full rounded-lg border border-dsc-border bg-white pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue" value={search} onChange={(e) => setSearch(e.target.value)} />
+              <input type="text" placeholder="Search agents..." className="h-9 w-full rounded-lg border border-dsc-border bg-dsc-surface pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-            <select className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <select className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
               <option value="">All Types</option>
               <option value="MICROSOFT">Microsoft</option>
               <option value="EXTERNAL">External</option>
               <option value="CUSTOM">Custom</option>
               <option value="SHARED">Shared</option>
             </select>
-            <select className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="">All Statuses</option>
               <option value="deployed">Deployed</option>
               <option value="not_deployed">Not Deployed</option>
               <option value="blocked">Blocked</option>
             </select>
-            <select className="h-9 rounded-lg border border-dsc-border bg-white px-3 text-sm" value={hostFilter} onChange={(e) => setHostFilter(e.target.value)}>
+            <select className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm" value={hostFilter} onChange={(e) => setHostFilter(e.target.value)}>
               <option value="">All Hosts</option>
               <option value="Copilot">Copilot</option>
               <option value="Teams">Teams</option>
@@ -327,9 +327,9 @@ export default function AgentsPage() {
                       <div className="flex items-center gap-3">
                         <div className="flex gap-1">
                           {agent.supportedHosts.slice(0, 3).map((h) => (
-                            <span key={h} className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">{h}</span>
+                            <span key={h} className="text-[10px] bg-dsc-border/30 text-dsc-text-secondary px-1.5 py-0.5 rounded">{h}</span>
                           ))}
-                          {agent.supportedHosts.length > 3 && <span className="text-[10px] text-gray-500">+{agent.supportedHosts.length - 3}</span>}
+                          {agent.supportedHosts.length > 3 && <span className="text-[10px] text-dsc-text-secondary">+{agent.supportedHosts.length - 3}</span>}
                         </div>
                         <Badge variant={meta.label.toLowerCase() as "default"}>{meta.label}</Badge>
                         <div className="text-right text-xs">
@@ -347,7 +347,7 @@ export default function AgentsPage() {
                         <div><p className="text-xs text-dsc-text-secondary">Version</p><p className="font-medium">{agent.version || "—"}</p></div>
                         <div><p className="text-xs text-dsc-text-secondary">Platform</p><p className="font-medium">{agent.platform || "web"}</p></div>
                         <div><p className="text-xs text-dsc-text-secondary">Last Modified</p><p className="font-medium">{timeAgo(agent.lastModifiedDateTime)}</p></div>
-                        <div><p className="text-xs text-dsc-text-secondary">Element Types</p><div className="flex gap-1 mt-0.5">{agent.elementTypes.map((e) => <span key={e} className="text-[10px] bg-gray-100 px-1.5 py-0.5 rounded">{e}</span>)}</div></div>
+                        <div><p className="text-xs text-dsc-text-secondary">Element Types</p><div className="flex gap-1 mt-0.5">{agent.elementTypes.map((e) => <span key={e} className="text-[10px] bg-dsc-border/30 px-1.5 py-0.5 rounded">{e}</span>)}</div></div>
                         <div><p className="text-xs text-dsc-text-secondary">Hosts</p><div className="flex flex-wrap gap-1 mt-0.5">{agent.supportedHosts.map((h) => <span key={h} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-1.5 py-0.5 rounded">{h}</span>)}</div></div>
                         {agent.ownerDisplayName && <div><p className="text-xs text-dsc-text-secondary">Owner</p><p className="font-medium">{agent.ownerDisplayName}</p></div>}
                         {agent.sensitivityLabel && <div><p className="text-xs text-dsc-text-secondary">Sensitivity</p><Badge variant={agent.sensitivityLabel === "Highly Confidential" ? "critical" : agent.sensitivityLabel === "Confidential" ? "high" : "medium"}>{agent.sensitivityLabel}</Badge></div>}
@@ -387,3 +387,4 @@ function KPI({ icon: Icon, label, value, color, sub }: { icon: React.ElementType
     </Card>
   );
 }
+

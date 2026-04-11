@@ -253,7 +253,7 @@ function SettingsContent() {
                   <h4 className="text-sm font-semibold text-dsc-text mb-3">Last Sync Results</h4>
                   <div className="space-y-2">
                     {Object.entries(syncResults).map(([key, val]) => (
-                      <div key={key} className="flex items-center justify-between p-2 rounded-md bg-white border border-dsc-border/50">
+                      <div key={key} className="flex items-center justify-between p-2 rounded-md bg-dsc-surface border border-dsc-border/50">
                         <div className="flex items-center gap-2">
                           {val.success ? (
                             <CheckCircle2 className="h-3.5 w-3.5 text-dsc-green flex-shrink-0" />
@@ -299,10 +299,10 @@ function SettingsContent() {
                       const isOk = ep.status.includes("OK");
                       const hasData = ep.count !== undefined && ep.count > 0;
                       return (
-                        <div key={i} className={`flex items-center justify-between p-2 rounded-md text-xs ${isOk ? "bg-white" : "bg-dsc-red-50/50"} border border-dsc-border/50`}>
+                        <div key={i} className={`flex items-center justify-between p-2 rounded-md text-xs ${isOk ? "bg-dsc-surface" : "bg-dsc-red-50/50"} border border-dsc-border/50`}>
                           <div className="flex items-center gap-1.5 min-w-0">
                             {isOk ? (
-                              hasData ? <CheckCircle2 className="h-3 w-3 text-dsc-green flex-shrink-0" /> : <div className="h-3 w-3 rounded-full bg-gray-200 flex-shrink-0" />
+                              hasData ? <CheckCircle2 className="h-3 w-3 text-dsc-green flex-shrink-0" /> : <div className="h-3 w-3 rounded-full bg-dsc-border/50 flex-shrink-0" />
                             ) : (
                               <AlertTriangle className="h-3 w-3 text-dsc-red flex-shrink-0" />
                             )}
@@ -358,14 +358,14 @@ function SettingsContent() {
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+              <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border/50">
                 <p className="text-xs text-dsc-text-secondary flex items-center gap-1.5">
                   <Fingerprint className="h-3.5 w-3.5" />
                   <strong>Security:</strong> We use OAuth2 with PKCE. No passwords or client secrets from your tenant are stored. You can revoke access anytime from your Azure AD portal.
                 </p>
               </div>
 
-              <div className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+              <div className="p-3 rounded-lg bg-dsc-bg border border-dsc-border/50">
                 <p className="text-xs text-dsc-text-secondary mb-2">Permissions requested:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {["User.Read", "Organization.Read.All", "Directory.Read.All", "Policy.Read.All", "SensitivityLabel.Read", "SecurityEvents.Read.All", "DeviceManagementConfiguration.Read.All", "MailboxSettings.Read", "RoleManagement.Read.Directory"].map((p) => (
@@ -478,3 +478,4 @@ function SettingsContent() {
     </div>
   );
 }
+

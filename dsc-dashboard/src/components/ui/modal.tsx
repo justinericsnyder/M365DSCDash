@@ -44,7 +44,7 @@ export function Modal({ open, onClose, title, children, className, wide }: Modal
         {title && (
           <div className="flex items-center justify-between px-5 py-4 border-b border-dsc-border flex-shrink-0">
             <h3 className="text-base font-semibold text-dsc-text">{title}</h3>
-            <button onClick={onClose} className="p-1 rounded-md hover:bg-gray-100 transition-colors">
+            <button onClick={onClose} className="p-1 rounded-md hover:bg-dsc-border/30 transition-colors">
               <X className="h-4 w-4 text-dsc-text-secondary" />
             </button>
           </div>
@@ -57,3 +57,4 @@ export function Modal({ open, onClose, title, children, className, wide }: Modal
     </div>
   );
 }
+

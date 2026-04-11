@@ -192,7 +192,7 @@ resources:
                 id="file-upload"
               />
               <label htmlFor="file-upload" className="cursor-pointer">
-                <span className="inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium border border-dsc-border bg-white text-dsc-text hover:bg-gray-50 h-8 px-3">
+                <span className="inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium border border-dsc-border bg-dsc-surface text-dsc-text hover:bg-dsc-bg h-8 px-3">
                   Choose File
                 </span>
               </label>
@@ -276,3 +276,4 @@ resources:
     </div>
   );
 }
+

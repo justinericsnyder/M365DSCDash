@@ -146,7 +146,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── Overall Health Summary ──────────────────────── */}
-      <Card className="border-dsc-border/60 bg-gradient-to-r from-white to-dsc-bg">
+      <Card className="border-dsc-border/60 bg-gradient-to-r from-dsc-surface to-dsc-bg">
         <div className="flex items-center gap-8">
           {/* Overall Score */}
           <div className="flex items-center gap-4 pr-8 border-r border-dsc-border">
@@ -202,7 +202,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="h-2 rounded-full bg-gray-100"><div className={`h-2 rounded-full ${pctBarColor(infraPct)} transition-all`} style={{ width: `${infraPct}%` }} /></div>
+                <div className="h-2 rounded-full bg-dsc-border/30"><div className={`h-2 rounded-full ${pctBarColor(infraPct)} transition-all`} style={{ width: `${infraPct}%` }} /></div>
                 <div className="grid grid-cols-4 gap-2 text-center text-xs">
                   <div><p className="font-bold text-dsc-green">{infra.nodes.compliant}</p><p className="text-dsc-text-secondary">Compliant</p></div>
                   <div><p className="font-bold text-dsc-yellow">{infra.nodes.drifted}</p><p className="text-dsc-text-secondary">Drifted</p></div>
@@ -238,7 +238,7 @@ export default function DashboardPage() {
                   return (
                     <div key={key} className="flex items-center gap-3">
                       <span className="text-xs font-medium w-16 text-dsc-text-secondary">{key}</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-gray-100"><div className={`h-1.5 rounded-full ${pctBarColor(pct)}`} style={{ width: `${pct}%` }} /></div>
+                      <div className="flex-1 h-1.5 rounded-full bg-dsc-border/30"><div className={`h-1.5 rounded-full ${pctBarColor(pct)}`} style={{ width: `${pct}%` }} /></div>
                       <span className={`text-xs w-8 text-right font-medium ${pctColor(pct)}`}>{pct}%</span>
                       {wl.drifted > 0 && <span className="text-[10px] text-dsc-red">{wl.drifted}d</span>}
                     </div>
@@ -272,7 +272,7 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-50"><Bot className="h-4 w-4 text-purple-600" /><div><p className="font-bold text-sm">{agents.totals.custom}</p><p className="text-[10px] text-dsc-text-secondary">Custom</p></div></div>
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-dsc-green-50"><TrendingUp className="h-4 w-4 text-dsc-green" /><div><p className="font-bold text-sm">{agents.totals.shared}</p><p className="text-[10px] text-dsc-text-secondary">Shared</p></div></div>
               </div>
-              <div className="h-1.5 rounded-full bg-gray-100 mb-2"><div className={`h-1.5 rounded-full ${pctBarColor(agentsPct)}`} style={{ width: `${agentsPct}%` }} /></div>
+              <div className="h-1.5 rounded-full bg-dsc-border/30 mb-2"><div className={`h-1.5 rounded-full ${pctBarColor(agentsPct)}`} style={{ width: `${agentsPct}%` }} /></div>
               <div className="flex items-center justify-between text-xs text-dsc-text-secondary">
                 <span>{agents.totals.deployed}/{agents.totals.total} deployed · {agents.totals.pinned} pinned{agents.totals.blocked > 0 ? ` · ${agents.totals.blocked} blocked` : ""}{agents.totals.withRisks > 0 ? ` · ${agents.totals.totalRiskCount} risks` : ""}</span>
               </div>
@@ -300,7 +300,7 @@ export default function DashboardPage() {
                 <div><p className="font-bold text-lg text-orange-600">{purview.labels.withEndpointProtection}</p><p className="text-dsc-text-secondary">Endpoint DLP</p></div>
                 <div><p className="font-bold text-lg text-dsc-red">{purview.drift?.unresolved || 0}</p><p className="text-dsc-text-secondary">Drift</p></div>
               </div>
-              <div className="h-1.5 rounded-full bg-gray-100 mb-2"><div className={`h-1.5 rounded-full ${pctBarColor(purviewPct)}`} style={{ width: `${purviewPct}%` }} /></div>
+              <div className="h-1.5 rounded-full bg-dsc-border/30 mb-2"><div className={`h-1.5 rounded-full ${pctBarColor(purviewPct)}`} style={{ width: `${purviewPct}%` }} /></div>
               <div className="space-y-1 mb-2">
                 {purview.labelHierarchy?.slice(0, 4).map((l: any) => (
                   <div key={l.id} className="flex items-center gap-2 p-1.5 rounded">
@@ -363,7 +363,7 @@ function SourceAggregate({ label, pct, trend, icon: Icon, href, color, sub }: {
 
   return (
     <Link href={href} className="group">
-      <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+      <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-dsc-bg transition-colors">
         <div className={`rounded-lg ${c.bg} p-1.5`}><Icon className={`h-4 w-4 ${c.text}`} /></div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
@@ -377,3 +377,4 @@ function SourceAggregate({ label, pct, trend, icon: Icon, href, color, sub }: {
     </Link>
   );
 }
+

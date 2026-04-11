@@ -52,7 +52,7 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-dsc-bg p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-dsc-blue to-dsc-green">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#8B3A5C] to-[#B89ADA]">
             <Blocks className="h-5 w-5 text-white" />
           </div>
           <div>

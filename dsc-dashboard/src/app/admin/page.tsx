@@ -131,7 +131,7 @@ export default function AdminPage() {
                 </tr></thead>
                 <tbody className="divide-y divide-dsc-border">
                   {users.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50">
+                    <tr key={u.id} className="hover:bg-dsc-bg">
                       <td className="py-2.5 px-3">
                         <p className="font-medium">{u.name || "—"}</p>
                         <p className="text-xs text-dsc-text-secondary">{u.email}</p>
@@ -171,3 +171,4 @@ export default function AdminPage() {
     </div>
   );
 }
+

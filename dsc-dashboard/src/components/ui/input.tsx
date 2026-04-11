@@ -17,7 +17,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <input
         id={id}
         className={cn(
-          "flex h-9 w-full rounded-lg border border-dsc-border bg-white px-3 py-1 text-sm shadow-sm transition-colors",
+          "flex h-9 w-full rounded-lg border border-dsc-border bg-dsc-surface px-3 py-1 text-sm shadow-sm transition-colors",
           "placeholder:text-dsc-text-secondary/60",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dsc-blue focus-visible:border-dsc-blue",
           "disabled:cursor-not-allowed disabled:opacity-50",
@@ -32,3 +32,4 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   )
 );
 Input.displayName = "Input";
+
