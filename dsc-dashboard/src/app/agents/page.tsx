@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -144,7 +144,7 @@ export default function AgentsPage() {
   const t = dashboard.totals!;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -387,4 +387,5 @@ function KPI({ icon: Icon, label, value, color, sub }: { icon: React.ElementType
     </Card>
   );
 }
+
 

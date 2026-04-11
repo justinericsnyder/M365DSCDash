@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,7 +42,7 @@ export default function ResourcesPage() {
   const sourceCounts = resources.reduce((acc, r) => { acc[r.source] = (acc[r.source] || 0) + 1; return acc; }, {} as Record<string, number>);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div>
         <h2 className="text-2xl font-bold text-dsc-text">Resources</h2>
         <p className="text-sm text-dsc-text-secondary mt-1">
@@ -195,4 +195,5 @@ function UnifiedResourceItem({ res }: { res: any }) {
     </div>
   );
 }
+
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,7 +51,7 @@ export default function DriftPage() {
   const severityCounts = events.reduce((acc, e) => { if (!e.resolved) acc[e.severity] = (acc[e.severity] || 0) + 1; return acc; }, {} as Record<string, number>);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div>
         <h2 className="text-2xl font-bold text-dsc-text">Drift Events</h2>
         <p className="text-sm text-dsc-text-secondary mt-1">Configuration drift across Infrastructure, M365, and Purview ({events.length} events)</p>
@@ -261,4 +261,5 @@ function formatValue(val: unknown): string {
   if (typeof val === "object") return JSON.stringify(val);
   return String(val);
 }
+
 

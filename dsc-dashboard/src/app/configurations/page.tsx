@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
@@ -64,7 +64,7 @@ resources:
         String: Hello from DSC`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-dsc-text">Configurations</h2>
@@ -231,4 +231,5 @@ resources:
     </div>
   );
 }
+
 

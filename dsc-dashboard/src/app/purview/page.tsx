@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,7 +82,7 @@ export default function PurviewPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
@@ -114,7 +114,7 @@ export default function PurviewPage() {
 /* ─── Overview Tab ─────────────────────────────────────── */
 function OverviewTab({ labels, ps, drift, labelHierarchy, recentDrifts, scopes, onResolve }: any) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-purple-50 p-2.5"><Tag className="h-5 w-5 text-purple-600" /></div><div><p className="text-2xl font-bold">{labels.total}</p><p className="text-xs text-dsc-text-secondary">Total Labels</p></div></div></Card>
@@ -252,7 +252,7 @@ function OverviewTab({ labels, ps, drift, labelHierarchy, recentDrifts, scopes, 
 function LabelsTab({ labelHierarchy, expandedLabel, setExpandedLabel }: any) {
   const applicableIcons: Record<string, string> = { email: "📧", file: "📄", site: "🌐", teamwork: "💬", unifiedGroup: "👥", schematizedData: "🗃️" };
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="text-sm text-dsc-text-secondary">
         Data from <code className="bg-dsc-border/30 px-1 rounded">GET /security/dataSecurityAndGovernance/sensitivityLabels</code> — full label taxonomy with protection settings, scopes, and application modes.
       </div>
@@ -339,7 +339,7 @@ function ScopesTab({ scopes }: any) {
   const userScopes = scopes?.filter((s: any) => s.userId) || [];
   const tenantScopes = scopes?.filter((s: any) => !s.userId) || [];
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="text-sm text-dsc-text-secondary">
         Data from <code className="bg-dsc-border/30 px-1 rounded">POST /users/&#123;id&#125;/dataSecurityAndGovernance/protectionScopes/compute</code> — computed DLP policy actions per user, activity, and location.
       </div>
@@ -408,7 +408,7 @@ function DriftTab({ drifts, expandedDrift, setExpandedDrift, onResolve }: any) {
   const unresolved = drifts?.filter((d: any) => !d.resolved) || [];
   const resolved = drifts?.filter((d: any) => d.resolved) || [];
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 stagger-children">
       <div className="text-sm text-dsc-text-secondary">
         Drift detected by comparing sensitivity label snapshots over time. Monitors changes to priority, protection, scope, enablement, and endpoint DLP settings.
       </div>
@@ -468,4 +468,5 @@ function DriftSection({ title, drifts, expandedDrift, setExpandedDrift, onResolv
     </Card>
   );
 }
+
 
