@@ -140,8 +140,8 @@ export default function NodesPage() {
 
       {/* Nodes List */}
       {nodesLoading && nodes.length === 0 ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" />
+        <div className="space-y-3 animate-pulse">
+          {[1,2,3,4].map((i) => <div key={i} className="rounded-xl border border-dsc-border bg-dsc-surface p-6 h-20" />)}
         </div>
       ) : nodes.length === 0 ? (
         <EmptyState
@@ -152,7 +152,7 @@ export default function NodesPage() {
           onAction={() => setShowCreate(true)}
         />
       ) : (
-        <div className="grid gap-3">
+        <div className="grid gap-3 stagger-children">
           {nodes.map((node) => (
             <Card key={node.id} hover>
               <div className="flex items-center justify-between">
