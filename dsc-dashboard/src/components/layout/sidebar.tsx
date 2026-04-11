@@ -6,8 +6,8 @@ import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Server, FileCode2, AlertTriangle, Upload,
-  Settings, Blocks, Cloud, ShieldCheck, History, Menu, X,
-  Sparkles,
+  Settings, Cloud, ShieldCheck, History, Menu, X,
+  Sparkles, Blocks,
 } from "lucide-react";
 
 interface NavItem {
@@ -64,9 +64,7 @@ export function Sidebar() {
     <>
       <div className="flex h-16 items-center justify-between border-b border-dsc-border px-5">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#8B3A5C] to-[#B89ADA]">
-            <Blocks className="h-4 w-4 text-white" />
-          </div>
+          <img src="/logo.svg" alt="AI DSC Dashboard" className="h-8 w-8 rounded-lg" />
           <div>
             <h1 className="text-sm font-bold text-dsc-text tracking-tight">AI DSC Dashboard</h1>
             <p className="text-[10px] text-dsc-text-secondary">v3.5 Configuration Manager</p>
