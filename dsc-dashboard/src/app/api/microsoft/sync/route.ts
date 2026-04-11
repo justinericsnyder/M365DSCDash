@@ -767,7 +767,7 @@ async function syncAICopilotSettings(token: string, tenantId: string): Promise<S
   }
 
   // ─── Teams App Catalog (Copilot-related apps) ─────────
-  const teamsAppsAI = await tryGraphGet(token, "/appCatalogs/teamsApps?$top=50");
+  const teamsAppsAI = await tryGraphGet(token, "/appCatalogs/teamsApps?$top=10");
   if (teamsAppsAI.data) {
     for (const app of ((teamsAppsAI.data as any).value || [])) {
       const name = app.displayName || app.id || "Unknown";
@@ -831,9 +831,11 @@ async function syncAICopilotSettings(token: string, tenantId: string): Promise<S
     }
   }
 
-  const agentIdentities = await tryGraphGet(token, "/agentRegistry/agentIdentities", true);
-  if (agentIdentities.data) {
-    for (const identity of ((agentIdentities.data as any).value || [])) {
+  // Agent Identities — try beta then v1.0
+  let agentIdData = await tryGraphGet(token, "/agentRegistry/agentIdentities?$top=50", true);
+  if (!agentIdData.data) agentIdData = await tryGraphGet(token, "/agentRegistry/agentIdentities?$top=50", false);
+  if (agentIdData.data) {
+    for (const identity of ((agentIdData.data as any).value || [])) {
       resources.push({
         workload: "AAD", resourceType: "AgentIdentity", displayName: identity.displayName || identity.id || "Agent Identity",
         properties: { Id: identity.id, DisplayName: identity.displayName, AccountEnabled: identity.accountEnabled, AgentType: identity.agentType, BlueprintId: identity.blueprintId, OwnerId: identity.ownerId, SponsorId: identity.sponsorId, CreatedDateTime: identity.createdDateTime },
@@ -843,9 +845,11 @@ async function syncAICopilotSettings(token: string, tenantId: string): Promise<S
     }
   }
 
-  const agentBlueprints = await tryGraphGet(token, "/agentRegistry/agentIdentityBlueprints", true);
-  if (agentBlueprints.data) {
-    for (const bp of ((agentBlueprints.data as any).value || [])) {
+  // Agent Blueprints — try beta then v1.0
+  let agentBpData = await tryGraphGet(token, "/agentRegistry/agentIdentityBlueprints?$top=50", true);
+  if (!agentBpData.data) agentBpData = await tryGraphGet(token, "/agentRegistry/agentIdentityBlueprints?$top=50", false);
+  if (agentBpData.data) {
+    for (const bp of ((agentBpData.data as any).value || [])) {
       resources.push({
         workload: "AAD", resourceType: "AgentIdentityBlueprint", displayName: bp.displayName || bp.id || "Blueprint",
         properties: { Id: bp.id, DisplayName: bp.displayName, Description: bp.description, AgentType: bp.agentType, Permissions: bp.permissions, CreatedDateTime: bp.createdDateTime },

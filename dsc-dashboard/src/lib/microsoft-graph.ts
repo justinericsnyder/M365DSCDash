@@ -40,6 +40,8 @@ const SCOPES = [
   "Policy.Read.All",                             // CA policies, auth methods, security defaults
   "SensitivityLabel.Read",                       // Purview labels
   "SecurityEvents.Read.All",                     // Security alerts, secure score
+  "SecurityAlert.Read.All",                      // Security alerts v2
+  "SecurityIncident.Read.All",                   // Security incidents
   "DeviceManagementConfiguration.Read.All",      // Intune compliance & config
   "DeviceManagementApps.Read.All",               // Intune app protection
   "MailboxSettings.Read",                        // Exchange mailbox settings
