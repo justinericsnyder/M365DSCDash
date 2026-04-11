@@ -10,13 +10,15 @@ import {
 
 export async function POST() {
   try {
-    // Clean existing demo data
-    await prisma.driftEvent.deleteMany({});
+    // Clean existing demo data (preserve real registered users)
+    await prisma.driftEvent.deleteMany({ where: { userId: "demo-user-001" } });
     await prisma.nodeConfiguration.deleteMany({});
     await prisma.resourceInstance.deleteMany({});
-    await prisma.configuration.deleteMany({});
-    await prisma.node.deleteMany({});
-    await prisma.user.deleteMany({});
+    await prisma.configuration.deleteMany({ where: { userId: "demo-user-001" } });
+    await prisma.node.deleteMany({ where: { userId: "demo-user-001" } });
+    // Only delete the demo user, not real registered users
+    await prisma.session.deleteMany({ where: { userId: "demo-user-001" } });
+    await prisma.user.deleteMany({ where: { id: "demo-user-001" } });
 
     // Create demo user
     const user = await prisma.user.create({
