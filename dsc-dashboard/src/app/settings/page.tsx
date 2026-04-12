@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Settings, Database, RefreshCw, Trash2, ExternalLink, Server, Globe,
@@ -165,6 +166,20 @@ function SettingsContent() {
 
   const isAuthenticated = !!user;
   const isConnected = msStatus?.connected;
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center animate-gravity-in">
+        <Lock className="h-12 w-12 text-dsc-text-secondary mb-4" />
+        <h2 className="text-2xl font-bold text-dsc-text mb-2">Sign in required</h2>
+        <p className="text-dsc-text-secondary max-w-md mb-6">You need to sign in to access Settings and manage your Microsoft 365 connection.</p>
+        <div className="flex gap-3">
+          <a href="/login"><Button>Sign In</Button></a>
+          <a href="/register"><Button variant="outline">Create Account</Button></a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 stagger-children max-w-3xl">
@@ -407,6 +422,9 @@ function SettingsContent() {
         </div>
       )}
 
+      {/* ─── Change Password ───────────────────────────── */}
+      <ChangePasswordSection />
+
       {/* ─── Infrastructure ────────────────────────────── */}
       <Card>
         <CardHeader>
@@ -479,3 +497,52 @@ function SettingsContent() {
   );
 }
 
+
+function ChangePasswordSection() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(""); setSuccess("");
+    if (newPassword !== confirm) { setError("Passwords do not match"); return; }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess(data.message);
+        setCurrentPassword(""); setNewPassword(""); setConfirm("");
+      } else setError(data.error);
+    } catch { setError("Failed to change password"); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base"><Lock className="h-4 w-4 text-dsc-text-secondary" />Change Password</CardTitle>
+        <CardDescription>Update your password. All other sessions will be signed out.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-3 max-w-sm">
+          <Input id="currentPw" label="Current Password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required />
+          <Input id="newPw" label="New Password" type="password" placeholder="Min 10 chars, upper+lower+number+special" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required />
+          <Input id="confirmPw" label="Confirm New Password" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+          {error && <div className="flex items-center gap-2 p-2.5 rounded-lg bg-dsc-red-50 border border-dsc-red/20 text-xs text-dsc-red"><AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />{error}</div>}
+          {success && <div className="flex items-center gap-2 p-2.5 rounded-lg bg-dsc-green-50 border border-dsc-green/20 text-xs text-dsc-green"><CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />{success}</div>}
+          <Button type="submit" size="sm" disabled={loading}><Lock className="h-3.5 w-3.5" />{loading ? "Updating..." : "Update Password"}</Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
