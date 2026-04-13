@@ -20,6 +20,39 @@ interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: "4.2.0",
+    date: "April 13, 2026",
+    type: "security",
+    title: "Auth Security Hardening — Audit Logging, Extended Sessions, Endpoint Removal",
+    description: "Major security improvements to prevent unauthorized password changes. Audit logging on all auth mutations, extended session lifetime, increased lockout threshold, and removed dangerous endpoints.",
+    icon: Shield,
+    commitHash: "5716ae4",
+    details: [
+      "Audit logging: [AUDIT] log entries on register, login, password change (includes IP, user agent, email)",
+      "Session lifetime extended from 24h to 7 days with 24h sliding window refresh",
+      "Account lockout threshold increased from 5 to 10 failed attempts (15 min cooldown)",
+      "Removed password reset endpoint — only change-password (requires current password) remains",
+      "Removed auth debug endpoint and lockout reset endpoint to reduce attack surface",
+      "Change-password now revokes all sessions and creates a fresh one after update",
+      "Fixed duplicate variable declaration in register route causing build failure",
+    ],
+  },
+  {
+    version: "4.1.0",
+    date: "April 11, 2026",
+    type: "feature",
+    title: "Change Password UI, Settings Auth Gate, Forgot Password Page",
+    description: "Added in-app password change form in Settings, gated Settings page behind authentication, and a forgot password informational page.",
+    icon: Lock,
+    commitHash: "c3fa0fa",
+    details: [
+      "Change Password section in Settings: current password + new password form with strength validation",
+      "Settings page now requires authentication — unauthenticated users redirected to login",
+      "Forgot password page explains that only admins can reset passwords (no self-service reset)",
+      "Custom logo SVG: removed white full-bleed background, kept rounded gray background",
+    ],
+  },
+  {
     version: "4.0.0",
     date: "April 11, 2026",
     type: "feature",

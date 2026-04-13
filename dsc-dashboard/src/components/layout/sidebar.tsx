@@ -67,7 +67,7 @@ export function Sidebar() {
           <img src="/logo.svg" alt="AI DSC Dashboard" className="h-8 w-8 rounded-lg" />
           <div>
             <h1 className="text-sm font-bold text-dsc-text tracking-tight">AI DSC Dashboard</h1>
-            <p className="text-[10px] text-dsc-text-secondary">v3.5 Configuration Manager</p>
+            <p className="text-[10px] text-dsc-text-secondary">v4.2 Configuration Manager</p>
           </div>
         </div>
         <button onClick={() => setOpen(false)} className="lg:hidden p-1 rounded-md hover:bg-dsc-border/30">

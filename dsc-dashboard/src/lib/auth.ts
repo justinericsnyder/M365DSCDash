@@ -11,12 +11,12 @@ const isProd = process.env.NODE_ENV === "production";
 const SESSION_COOKIE = isProd ? "__Host-dsc_session" : "dsc_session";
 const CSRF_COOKIE = isProd ? "__Host-dsc_csrf" : "dsc_csrf";
 const BCRYPT_ROUNDS = 12;
-const SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
-const SESSION_REFRESH_THRESHOLD_MS = 4 * 60 * 60 * 1000; // refresh if <4h remaining
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_REFRESH_THRESHOLD_MS = 24 * 60 * 60 * 1000; // refresh if <24h remaining
 const RATE_LIMIT_WINDOW_S = 900; // 15 minutes
-const RATE_LIMIT_MAX_ATTEMPTS = 5;
+const RATE_LIMIT_MAX_ATTEMPTS = 10;
 const LOCKOUT_DURATION_S = 900; // 15 minutes
-const LOCKOUT_MAX_FAILURES = 5;
+const LOCKOUT_MAX_FAILURES = 10;
 
 function getSecret(): Uint8Array {
   const secret = process.env.AUTH_SECRET;
@@ -62,7 +62,7 @@ async function createSessionToken(userId: string, sessionId: string): Promise<st
   return new SignJWT({ sub: userId, sid: sessionId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("24h")
+    .setExpirationTime("7d")
     .sign(getSecret());
 }
 

@@ -65,6 +65,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    console.log(`[AUDIT] User registered: ${email.toLowerCase()} role=${isFirstUser ? "ADMIN" : "PENDING"} from IP ${ip}`);
+
     return NextResponse.json({
       success: true,
       isFirstUser,
