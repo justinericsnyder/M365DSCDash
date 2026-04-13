@@ -416,3 +416,41 @@ model PurviewLabelDrift {
 
   @@index([tenantId, resolved])
 }
+
+// ─── Audit Log ──────────────────────────────────────────
+
+enum AuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  REGISTER
+  PASSWORD_CHANGED
+  PASSWORD_CHANGE_FAILED
+  SESSION_CREATED
+  SESSION_REVOKED
+  ACCOUNT_LOCKED
+  ACCOUNT_APPROVED
+  ACCOUNT_REJECTED
+  ADMIN_PROMOTE
+  ADMIN_DEMOTE
+  TENANT_CONNECTED
+  TENANT_DISCONNECTED
+  SYNC_TRIGGERED
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  action    AuditAction
+  userId    String?
+  email     String?
+  ipAddress String?
+  userAgent String?
+  details   String?
+  success   Boolean     @default(true)
+  createdAt DateTime    @default(now())
+
+  @@index([action])
+  @@index([userId])
+  @@index([email])
+  @@index([createdAt])
+}

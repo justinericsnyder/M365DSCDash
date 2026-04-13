@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { exchangeCodeForTokens, storeRefreshToken, graphGet } from "@/lib/microsoft-graph";
+import { writeAuditLog } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   try {
@@ -79,6 +80,8 @@ export async function GET(req: NextRequest) {
     // Store encrypted refresh token
     const scopes = tokens.scope.split(" ").filter(Boolean);
     await storeRefreshToken(tenant.id, tokens.refreshToken, scopes, userEmail, azureTenantId);
+
+    writeAuditLog({ action: "TENANT_CONNECTED", userId: statePayload.uid, email: userEmail, details: `Tenant: ${orgInfo?.displayName || azureTenantId}` });
 
     return NextResponse.redirect(new URL("/settings?connected=true", req.url));
   } catch (error) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPassword, validatePasswordStrength, checkRateLimit, securityHeaders } from "@/lib/auth";
+import { writeAuditLog } from "@/lib/audit";
 import { z } from "zod";
 
 const RegisterSchema = z.object({
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
     });
 
     console.log(`[AUDIT] User registered: ${email.toLowerCase()} role=${isFirstUser ? "ADMIN" : "PENDING"} from IP ${ip}`);
+    writeAuditLog({ action: "REGISTER", userId: user.id, email: user.email, ipAddress: ip, userAgent: req.headers.get("user-agent") || undefined, details: `Role: ${isFirstUser ? "ADMIN" : "PENDING"}` });
 
     return NextResponse.json({
       success: true,

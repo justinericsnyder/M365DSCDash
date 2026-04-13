@@ -4,6 +4,7 @@ import {
   verifyPassword, createSession, checkRateLimit,
   isAccountLocked, recordFailedLogin, clearFailedLogins, securityHeaders,
 } from "@/lib/auth";
+import { writeAuditLog, getClientIp } from "@/lib/audit";
 import { z } from "zod";
 
 const LoginSchema = z.object({
@@ -48,17 +49,24 @@ export async function POST(req: NextRequest) {
     // Find user — always run password check to prevent timing-based user enumeration
     const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
 
+    const ua = req.headers.get("user-agent") || "unknown";
+
     if (!user || !user.passwordHash) {
       // Simulate bcrypt timing even when user doesn't exist
       const { hash } = await import("bcryptjs");
       await hash("dummy-password-timing-safe", 4);
       await recordFailedLogin(email);
+      writeAuditLog({ action: "LOGIN_FAILED", email: email.toLowerCase(), ipAddress: ip, userAgent: ua, details: "User not found", success: false });
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401, headers });
     }
 
     const valid = await verifyPassword(password, user.passwordHash);
     if (!valid) {
       const isNowLocked = await recordFailedLogin(email);
+      writeAuditLog({ action: "LOGIN_FAILED", userId: user.id, email: user.email, ipAddress: ip, userAgent: ua, details: isNowLocked ? "Wrong password — account locked" : "Wrong password", success: false });
+      if (isNowLocked) {
+        writeAuditLog({ action: "ACCOUNT_LOCKED", userId: user.id, email: user.email, ipAddress: ip, details: "Locked after too many failed attempts" });
+      }
       const msg = isNowLocked
         ? "Account locked due to too many failed attempts. Try again in 15 minutes."
         : "Invalid email or password";
@@ -70,6 +78,7 @@ export async function POST(req: NextRequest) {
 
     // Check approval status
     if (!user.isApproved && user.role !== "ADMIN") {
+      writeAuditLog({ action: "LOGIN_FAILED", userId: user.id, email: user.email, ipAddress: ip, userAgent: ua, details: "Account pending approval", success: false });
       return NextResponse.json(
         { error: "Your account is pending admin approval.", pendingApproval: true },
         { status: 403, headers }
@@ -77,8 +86,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Create session
-    const ua = req.headers.get("user-agent") || undefined;
     await createSession(user.id, ip, ua);
+    writeAuditLog({ action: "LOGIN_SUCCESS", userId: user.id, email: user.email, ipAddress: ip, userAgent: ua });
 
     return NextResponse.json({
       success: true,

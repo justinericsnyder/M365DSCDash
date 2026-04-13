@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth, securityHeaders } from "@/lib/auth";
 import { getAccessTokenForTenant, graphGet } from "@/lib/microsoft-graph";
 import { cacheInvalidate } from "@/lib/redis";
+import { writeAuditLog } from "@/lib/audit";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -85,6 +86,8 @@ export async function POST() {
     const successCount = Object.values(results).filter((r) => r.success).length;
     const skippedCount = Object.values(results).filter((r) => r.skipped).length;
     const totalCount = Object.keys(results).length;
+
+    writeAuditLog({ action: "SYNC_TRIGGERED", userId: user.id, email: user.email, details: `${successCount}/${totalCount} sources synced` });
 
     return NextResponse.json({
       success: true,

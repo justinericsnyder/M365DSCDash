@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth, hashPassword, verifyPassword, validatePasswordStrength, securityHeaders, revokeAllSessions, createSession, verifyCsrf } from "@/lib/auth";
+import { writeAuditLog, getClientIp } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   const headers = securityHeaders();
@@ -24,7 +25,8 @@ export async function POST(req: NextRequest) {
 
     const valid = await verifyPassword(currentPassword, dbUser.passwordHash);
     if (!valid) {
-      console.log(`[AUDIT] Failed password change attempt for ${user.email} from ${req.headers.get("x-forwarded-for")}`);
+      const ip = getClientIp(req);
+      writeAuditLog({ action: "PASSWORD_CHANGE_FAILED", userId: user.id, email: user.email, ipAddress: ip, userAgent: req.headers.get("user-agent") || undefined, details: "Wrong current password", success: false });
       return NextResponse.json({ error: "Current password is incorrect" }, { status: 401, headers });
     }
 
@@ -33,9 +35,9 @@ export async function POST(req: NextRequest) {
     await prisma.user.update({ where: { id: user.id }, data: { passwordHash: newHash } });
 
     // Audit log
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
     const ua = req.headers.get("user-agent") || "unknown";
-    console.log(`[AUDIT] Password changed for ${user.email} by user ${user.id} from IP ${ip} UA: ${ua.substring(0, 80)}`);
+    writeAuditLog({ action: "PASSWORD_CHANGED", userId: user.id, email: user.email, ipAddress: ip, userAgent: ua });
 
     // Revoke all sessions and create a new one
     await revokeAllSessions(user.id);
