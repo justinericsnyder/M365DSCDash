@@ -63,11 +63,12 @@ Built as a solo full-stack project demonstrating end-to-end ownership: authentic
 - Industry-standard password hashing and session management
 - Encrypted OAuth2 token storage at rest
 - PKCE-protected OAuth2 flow — no client secrets from user tenants stored
-- Redis-backed rate limiting and account lockout
+- Abuse prevention with rate limiting and account lockout
 - Multi-tenant data isolation — users only see their own tenant data
-- Persistent database-backed audit log tracking all auth events
-- CSRF protection, secure cookie configuration, and security response headers
+- Persistent database-backed audit log tracking auth and admin events
+- CSRF protection and secure cookie configuration
 - Input validation on all API request bodies
+- Security response headers on all responses
 - Admin approval required for new user accounts
 
 ### Admin Controls
@@ -140,35 +141,26 @@ sequenceDiagram
     participant Entra as Microsoft Entra ID
     participant Graph as Microsoft Graph API
 
-    User->>App: Click "Connect Microsoft 365"
-    App->>App: Generate PKCE verifier + challenge
-    App->>App: Generate state token with timestamp
+    User->>App: Connect Microsoft 365
     App->>User: Redirect to Microsoft login
-
-    User->>Entra: Authenticate + consent to permissions
-    Entra->>App: Authorization code + state (callback)
-
-    App->>App: Validate state + PKCE verifier
-    App->>Entra: Exchange code for tokens (with PKCE)
-    Entra->>App: Access token + refresh token
-
-    App->>App: Encrypt refresh token (authenticated encryption)
-    App->>App: Store encrypted token in database
-    App->>Graph: Fetch organization info
+    User->>Entra: Authenticate + consent
+    Entra->>App: Authorization callback
+    App->>Entra: Token exchange
+    Entra->>App: Tokens issued
+    App->>App: Securely store credentials
+    App->>Graph: Fetch tenant info
     Graph->>App: Tenant details
-
-    App->>User: Redirect to Settings (connected)
+    App->>User: Connection confirmed
 
     Note over User,Graph: Subsequent Syncs
 
-    User->>App: Click "Sync Now"
-    App->>App: Decrypt stored refresh token
-    App->>Entra: Refresh access token
-    Entra->>App: New access token
+    User->>App: Trigger sync
+    App->>Entra: Refresh credentials
+    Entra->>App: Updated credentials
     App->>Graph: Fetch M365 configuration state
-    Graph->>App: Workload data (10+ workloads)
+    Graph->>App: Workload data across 10+ services
     App->>App: Detect drift from desired state
-    App->>User: Updated dashboard with compliance status
+    App->>User: Updated compliance dashboard
 ```
 
 ---
@@ -266,7 +258,6 @@ erDiagram
     Session {
         string id PK
         string userId FK
-        string tokenHash UK
         datetime expiresAt
     }
 
@@ -332,8 +323,6 @@ erDiagram
     AuditLog {
         string id PK
         string action
-        string email
-        string ipAddress
         boolean success
         datetime createdAt
     }
@@ -404,43 +393,39 @@ graph TB
         Browser["Browser Client"]
     end
 
-    subgraph SecurityLayers["Security Layers"]
+    subgraph SecurityLayers["Defense in Depth"]
         direction TB
-        Headers["Security Headers<br/><i>Content-Type · Frame · Referrer<br/>Cache Control</i>"]
-        RateLimit["Rate Limiter<br/><i>Redis-backed<br/>Per-IP Throttling</i>"]
-        Lockout["Account Lockout<br/><i>Progressive Lockout<br/>on Failed Attempts</i>"]
-        CSRF["CSRF Validation<br/><i>Double-Submit Cookie<br/>Constant-Time Compare</i>"]
-        SessionVal["Session Validation<br/><i>Signed Token Verification<br/>Server-Side Hash Check</i>"]
-        TenantIso["Tenant Isolation<br/><i>Query-Level Scoping<br/>Per-User Data Boundaries</i>"]
+        Transport["Transport Security"]
+        Abuse["Abuse Prevention"]
+        AuthN["Authentication"]
+        AuthZ["Authorization &<br/>Tenant Isolation"]
     end
 
-    subgraph Encryption["Token Security"]
-        TokenEnc["Refresh Token Encryption<br/><i>Authenticated Encryption at Rest</i>"]
-        PassHash["Password Hashing<br/><i>Adaptive Cost Factor</i>"]
+    subgraph DataProtection["Data Protection"]
+        Encryption["Encrypted Storage"]
+        Hashing["Credential Hashing"]
     end
 
-    subgraph AuditTrail["Audit Trail"]
-        AuditDB[("Audit Log<br/><i>Append-Only<br/>16 Event Types<br/>IP · User Agent · Timestamp</i>")]
+    subgraph Monitoring["Monitoring"]
+        AuditDB[("Audit Log<br/><i>Append-Only<br/>Event Trail</i>")]
     end
 
-    Browser --> Headers
-    Headers --> RateLimit
-    RateLimit --> Lockout
-    Lockout --> CSRF
-    CSRF --> SessionVal
-    SessionVal --> TenantIso
-    TenantIso --> TokenEnc
-    TokenEnc --> PassHash
+    Browser --> Transport
+    Transport --> Abuse
+    Abuse --> AuthN
+    AuthN --> AuthZ
+    AuthZ --> Encryption
+    Encryption --> Hashing
 
-    Headers -.->|"log"| AuditDB
-    RateLimit -.->|"log"| AuditDB
-    Lockout -.->|"log"| AuditDB
-    SessionVal -.->|"log"| AuditDB
+    Transport -.->|"log"| AuditDB
+    Abuse -.->|"log"| AuditDB
+    AuthN -.->|"log"| AuditDB
+    AuthZ -.->|"log"| AuditDB
 
     style Request fill:#1a1a2e,stroke:#5A2438,color:#f0e6eb
     style SecurityLayers fill:#2C1420,stroke:#8B3A5C,color:#f0e6eb
-    style Encryption fill:#0f3460,stroke:#5A2438,color:#f0e6eb
-    style AuditTrail fill:#336791,stroke:#1b3a57,color:#ffffff
+    style DataProtection fill:#0f3460,stroke:#5A2438,color:#f0e6eb
+    style Monitoring fill:#336791,stroke:#1b3a57,color:#ffffff
 ```
 
 ---
