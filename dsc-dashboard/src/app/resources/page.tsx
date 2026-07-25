@@ -1,16 +1,173 @@
 ﻿"use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  makeStyles,
+  tokens,
+  Text,
+  Select,
+  Spinner,
+  Input,
+} from "@fluentui/react-components";
+import {
+  Apps20Regular,
+  CheckmarkCircle20Regular,
+  DismissCircle20Regular,
+  Filter20Regular,
+  Cloud20Regular,
+  ShieldCheckmark20Regular,
+  Server20Regular,
+  ChevronDown20Regular,
+  ChevronUp20Regular,
+} from "@fluentui/react-icons";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Blocks, CheckCircle2, XCircle, Filter, Cloud, ShieldCheck, Server, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
-import Link from "next/link";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+const sourceIcons: Record<string, { icon: React.ElementType; label: string; color: string }> = {
+  infra: { icon: Server20Regular, label: "Infrastructure", color: "#7ECC9A" },
+  m365: { icon: Cloud20Regular, label: "M365 DSC", color: "#B89ADA" },
+  purview: { icon: ShieldCheckmark20Regular, label: "Purview", color: "#7C3AED" },
+};
+
+const useStyles = makeStyles({
+  page: { display: "flex", flexDirection: "column", gap: "24px" },
+  headerSubtext: { color: tokens.colorNeutralForeground3, marginTop: "4px" },
+  sourcePills: { display: "flex", flexWrap: "wrap", gap: "8px" },
+  sourceBtn: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    paddingLeft: "12px",
+    paddingRight: "12px",
+    paddingTop: "6px",
+    paddingBottom: "6px",
+    borderRadius: "9999px",
+    fontSize: tokens.fontSizeBase200,
+    fontWeight: tokens.fontWeightMedium,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+    color: tokens.colorNeutralForeground3,
+    cursor: "pointer",
+    transitionProperty: "background-color, border-color, color",
+    transitionDuration: "150ms",
+    ":hover": { backgroundColor: tokens.colorSubtleBackgroundHover },
+  },
+  sourceBtnActive: {
+    backgroundColor: "#221830",
+    color: "#B89ADA",
+  },
+  clearBtn: {
+    background: "none",
+    border: "none",
+    fontSize: tokens.fontSizeBase200,
+    color: "#B89ADA",
+    cursor: "pointer",
+    ":hover": { textDecoration: "underline" },
+  },
+  filterRow: { display: "flex", flexWrap: "wrap", gap: "12px", alignItems: "center" },
+  loadingContainer: { display: "flex", justifyContent: "center", padding: "48px" },
+  groupList: { display: "flex", flexDirection: "column", gap: "16px" },
+  groupHeader: { display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" },
+  groupCompliance: { marginLeft: "auto", color: tokens.colorNeutralForeground3 },
+  itemList: { display: "flex", flexDirection: "column", gap: "6px" },
+  itemRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    cursor: "pointer",
+    transitionProperty: "background-color",
+    transitionDuration: "150ms",
+    ":hover": { backgroundColor: tokens.colorSubtleBackgroundHover },
+  },
+  itemLeft: { display: "flex", alignItems: "center", gap: "10px", minWidth: 0 },
+  itemRight: { display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 },
+  colorSwatch: { width: "12px", height: "12px", borderRadius: "2px", flexShrink: 0 },
+  expandedPanel: {
+    marginTop: "8px",
+    marginLeft: "24px",
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+    padding: "12px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  expandedHeader: { display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" },
+  codeTag: {
+    fontSize: "10px",
+    backgroundColor: `${tokens.colorNeutralStroke1}30`,
+    paddingLeft: "8px",
+    paddingRight: "8px",
+    paddingTop: "2px",
+    paddingBottom: "2px",
+    borderRadius: "4px",
+    fontFamily: "monospace",
+  },
+  propsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+    gap: "6px",
+  },
+  propCard: {
+    padding: "8px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}50`,
+  },
+  propLabel: {
+    fontSize: "9px",
+    color: tokens.colorNeutralForeground3,
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  arrayContainer: {
+    padding: "8px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}50`,
+  },
+  arrayPills: { display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "4px" },
+  arrayPill: {
+    fontSize: "10px",
+    backgroundColor: "#221830",
+    color: "#B89ADA",
+    paddingLeft: "6px",
+    paddingRight: "6px",
+    paddingTop: "2px",
+    paddingBottom: "2px",
+    borderRadius: "9999px",
+  },
+  objectContainer: {
+    padding: "8px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}50`,
+  },
+  objectGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px", marginTop: "4px" },
+  objectEntry: {
+    display: "flex",
+    justifyContent: "space-between",
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: tokens.borderRadiusMedium,
+    paddingLeft: "6px",
+    paddingRight: "6px",
+    paddingTop: "2px",
+    paddingBottom: "2px",
+    fontSize: "10px",
+  },
+});
+
 export default function ResourcesPage() {
+  const styles = useStyles();
   const [resources, setResources] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("");
@@ -25,12 +182,6 @@ export default function ResourcesPage() {
     fetch(`/api/resources?${params}`).then((r) => r.json()).then(setResources).finally(() => setLoading(false));
   }, [typeFilter, complianceFilter, sourceFilter]);
 
-  const sourceIcons: Record<string, { icon: React.ElementType; label: string; color: string }> = {
-    infra: { icon: Server, label: "Infrastructure", color: "text-dsc-green" },
-    m365: { icon: Cloud, label: "M365 DSC", color: "text-dsc-blue" },
-    purview: { icon: ShieldCheck, label: "Purview", color: "text-purple-600" },
-  };
-
   // Group by source + resourceType
   const grouped = resources.reduce((acc, r) => {
     const key = `${r.source}/${r.resourceType}`;
@@ -42,59 +193,82 @@ export default function ResourcesPage() {
   const sourceCounts = resources.reduce((acc, r) => { acc[r.source] = (acc[r.source] || 0) + 1; return acc; }, {} as Record<string, number>);
 
   return (
-    <div className="space-y-6 stagger-children">
+    <div className={styles.page}>
       <div>
-        <h2 className="text-2xl font-bold text-dsc-text">Resources</h2>
-        <p className="text-sm text-dsc-text-secondary mt-1">
+        <Text size={700} weight="bold" block>Resources</Text>
+        <Text size={300} block className={styles.headerSubtext}>
           Unified view across Infrastructure DSC, M365 DSC, and Purview ({resources.length} total)
-        </p>
+        </Text>
       </div>
 
       {/* Source summary pills */}
-      <div className="flex flex-wrap gap-2">
+      <div className={styles.sourcePills}>
         {Object.entries(sourceCounts).map(([src, count]) => {
           const meta = sourceIcons[src] || sourceIcons.infra;
           const Icon = meta.icon;
+          const isActive = sourceFilter === src;
           return (
-            <button key={src} onClick={() => setSourceFilter(sourceFilter === src ? "" : src)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${sourceFilter === src ? "bg-dsc-blue-50 border-dsc-blue/30 text-dsc-blue" : "bg-dsc-surface border-dsc-border text-dsc-text-secondary hover:bg-dsc-bg"}`}>
-              <Icon className={`h-3 w-3 ${meta.color}`} />{meta.label} <span className="font-bold">{String(count)}</span>
+            <button
+              key={src}
+              onClick={() => setSourceFilter(isActive ? "" : src)}
+              className={styles.sourceBtn}
+              style={isActive ? { backgroundColor: "#221830", borderColor: "#B89ADA50", color: "#B89ADA" } : undefined}
+            >
+              <Icon style={{ color: meta.color, fontSize: 12 }} />
+              {meta.label}
+              <Text weight="bold" size={200}>{String(count)}</Text>
             </button>
           );
         })}
-        {sourceFilter && <button onClick={() => setSourceFilter("")} className="text-xs text-dsc-blue hover:underline">Clear</button>}
+        {sourceFilter && (
+          <button onClick={() => setSourceFilter("")} className={styles.clearBtn}>Clear</button>
+        )}
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <Filter className="h-4 w-4 text-dsc-text-secondary" />
-        <input type="text" placeholder="Filter by resource type..." className="h-9 w-48 sm:w-64 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} />
-        <select className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm" value={complianceFilter} onChange={(e) => setComplianceFilter(e.target.value)}>
+      <div className={styles.filterRow}>
+        <Filter20Regular style={{ color: tokens.colorNeutralForeground3 }} />
+        <Input
+          type="text"
+          placeholder="Filter by resource type..."
+          appearance="filled-darker"
+          value={typeFilter}
+          onChange={(e) => setTypeFilter(e.target.value)}
+          style={{ width: 220 }}
+        />
+        <Select
+          value={complianceFilter}
+          onChange={(e) => setComplianceFilter((e.target as HTMLSelectElement).value)}
+          appearance="filled-darker"
+          style={{ height: 32 }}
+        >
           <option value="">All States</option>
           <option value="true">Compliant</option>
           <option value="false">Drifted</option>
-        </select>
+        </Select>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" /></div>
+        <div className={styles.loadingContainer}>
+          <Spinner size="large" label="Loading resources..." />
+        </div>
       ) : resources.length === 0 ? (
-        <EmptyState icon={Blocks} title="No resources found" description="Resources appear when you sync data or add DSC configurations." />
+        <EmptyState icon={Apps20Regular} title="No resources found" description="Resources appear when you sync data or add DSC configurations." />
       ) : (
-        <div className="space-y-4">
+        <div className={styles.groupList}>
           {Object.values(grouped).map((group: any) => {
             const meta = sourceIcons[group.source] || sourceIcons.infra;
             const Icon = meta.icon;
             const compliant = group.items.filter((r: any) => r.status === "COMPLIANT").length;
             return (
               <Card key={`${group.source}/${group.resourceType}`}>
-                <div className="flex items-center gap-3 mb-3">
-                  <Icon className={`h-4 w-4 ${meta.color}`} />
-                  <h3 className="font-semibold text-sm text-dsc-text">{group.resourceType}</h3>
+                <div className={styles.groupHeader}>
+                  <Icon style={{ color: meta.color }} />
+                  <Text weight="semibold" size={300}>{group.resourceType}</Text>
                   <Badge variant={group.source === "m365" ? "active" : group.source === "purview" ? "medium" : "default"}>{meta.label}</Badge>
-                  <span className="text-xs text-dsc-text-secondary ml-auto">{compliant}/{group.items.length} compliant</span>
+                  <Text size={200} className={styles.groupCompliance}>{compliant}/{group.items.length} compliant</Text>
                 </div>
-                <div className="space-y-1.5">
+                <div className={styles.itemList}>
                   {group.items.map((res: any) => (
                     <UnifiedResourceItem key={res.id} res={res} />
                   ))}
@@ -110,53 +284,58 @@ export default function ResourcesPage() {
 
 /* ─── Expandable Resource Item ───────────────────────── */
 function UnifiedResourceItem({ res }: { res: any }) {
+  const styles = useStyles();
   const [expanded, setExpanded] = useState(false);
   const props = res.properties || {};
   const entries = Object.entries(props).filter(([, v]) => v !== null && v !== undefined);
   const simpleProps = entries.filter(([, v]) => typeof v !== "object");
   const complexProps = entries.filter(([, v]) => typeof v === "object" && v !== null);
 
-  const boolColor = (val: unknown) => val === true ? "text-dsc-green" : val === false ? "text-dsc-red" : "text-dsc-text";
+  const boolColor = (val: unknown) => val === true ? "#7ECC9A" : val === false ? "#F28B8B" : tokens.colorNeutralForeground1;
 
   return (
     <div>
-      <div
-        className="flex items-center justify-between p-2.5 rounded-lg bg-dsc-bg border border-dsc-border cursor-pointer hover:border-dsc-blue/30 transition-colors"
-        onClick={() => setExpanded(!expanded)}
-      >
-        <div className="flex items-center gap-2.5">
-          {res.status === "COMPLIANT" ? <CheckCircle2 className="h-3.5 w-3.5 text-dsc-green flex-shrink-0" /> : <XCircle className="h-3.5 w-3.5 text-dsc-red flex-shrink-0" />}
-          {res.color && <div className="h-3 w-3 rounded-sm flex-shrink-0" style={{ backgroundColor: res.color }} />}
+      <div className={styles.itemRow} onClick={() => setExpanded(!expanded)}>
+        <div className={styles.itemLeft}>
+          {res.status === "COMPLIANT"
+            ? <CheckmarkCircle20Regular style={{ color: "#7ECC9A", flexShrink: 0, fontSize: 14 }} />
+            : <DismissCircle20Regular style={{ color: "#F28B8B", flexShrink: 0, fontSize: 14 }} />
+          }
+          {res.color && <div className={styles.colorSwatch} style={{ backgroundColor: res.color }} />}
           <div>
-            <p className="text-sm font-medium text-dsc-text">{res.name}</p>
-            {res.parentName && <p className="text-xs text-dsc-text-secondary">{res.parentName}{res.workload ? ` · ${res.workload}` : ""}</p>}
+            <Text size={300} weight="medium">{res.name}</Text>
+            {res.parentName && (
+              <Text size={200} block style={{ color: tokens.colorNeutralForeground3 }}>
+                {res.parentName}{res.workload ? ` · ${res.workload}` : ""}
+              </Text>
+            )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={styles.itemRight}>
           {res.driftCount > 0 && <Badge variant="drifted">{res.driftCount} drift</Badge>}
-          <span className="text-xs text-dsc-text-secondary">{timeAgo(res.lastChecked)}</span>
-          {expanded ? <ChevronUp className="h-3.5 w-3.5 text-dsc-text-secondary" /> : <ChevronDown className="h-3.5 w-3.5 text-dsc-text-secondary" />}
+          <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{timeAgo(res.lastChecked)}</Text>
+          {expanded ? <ChevronUp20Regular style={{ color: tokens.colorNeutralForeground3, fontSize: 14 }} /> : <ChevronDown20Regular style={{ color: tokens.colorNeutralForeground3, fontSize: 14 }} />}
         </div>
       </div>
 
       {expanded && (
-        <div className="mt-2 ml-6 rounded-lg border border-dsc-border bg-dsc-surface p-3 space-y-3">
+        <div className={styles.expandedPanel}>
           {/* Header */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[10px] bg-dsc-border/30 px-2 py-0.5 rounded font-mono">{res.resourceType}</span>
+          <div className={styles.expandedHeader}>
+            <span className={styles.codeTag}>{res.resourceType}</span>
             <Badge variant={res.status === "COMPLIANT" ? "compliant" : "drifted"}>{res.status}</Badge>
-            {res.source && <span className="text-[10px] text-dsc-text-secondary">{res.source}</span>}
+            {res.source && <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>{res.source}</Text>}
           </div>
 
           {/* Simple properties grid */}
           {simpleProps.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            <div className={styles.propsGrid}>
               {simpleProps.map(([key, val]) => (
-                <div key={key} className="p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
-                  <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide">{key.replace(/([A-Z])/g, " $1").trim()}</p>
-                  <p className={`text-xs font-medium mt-0.5 ${typeof val === "boolean" ? boolColor(val) : "text-dsc-text"}`}>
+                <div key={key} className={styles.propCard}>
+                  <Text block className={styles.propLabel}>{key.replace(/([A-Z])/g, " $1").trim()}</Text>
+                  <Text size={200} weight="medium" style={{ marginTop: "2px", color: typeof val === "boolean" ? boolColor(val) : tokens.colorNeutralForeground1 }}>
                     {typeof val === "boolean" ? (val ? "✓ Yes" : "✗ No") : String(val)}
-                  </p>
+                  </Text>
                 </div>
               ))}
             </div>
@@ -166,22 +345,30 @@ function UnifiedResourceItem({ res }: { res: any }) {
           {complexProps.map(([key, val]) => {
             if (Array.isArray(val) && val.every((v) => typeof v === "string")) {
               return (
-                <div key={key} className="p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
-                  <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide mb-1">{key.replace(/([A-Z])/g, " $1").trim()}</p>
-                  <div className="flex flex-wrap gap-1">{(val as string[]).map((item, i) => <span key={i} className="text-[10px] bg-dsc-blue-50 text-dsc-blue px-1.5 py-0.5 rounded-full">{item}</span>)}</div>
+                <div key={key} className={styles.arrayContainer}>
+                  <Text block className={styles.propLabel}>{key.replace(/([A-Z])/g, " $1").trim()}</Text>
+                  <div className={styles.arrayPills}>
+                    {(val as string[]).map((item, i) => (
+                      <span key={i} className={styles.arrayPill}>{item}</span>
+                    ))}
+                  </div>
                 </div>
               );
             }
             if (typeof val === "object" && val !== null && !Array.isArray(val)) {
               const subEntries = Object.entries(val as Record<string, unknown>).filter(([, v]) => v != null);
               return (
-                <div key={key} className="p-2 rounded-md bg-dsc-bg border border-dsc-border/50">
-                  <p className="text-[9px] text-dsc-text-secondary uppercase tracking-wide mb-1">{key.replace(/([A-Z])/g, " $1").trim()}</p>
-                  <div className="grid grid-cols-2 gap-1">
+                <div key={key} className={styles.objectContainer}>
+                  <Text block className={styles.propLabel}>{key.replace(/([A-Z])/g, " $1").trim()}</Text>
+                  <div className={styles.objectGrid}>
                     {subEntries.slice(0, 8).map(([sk, sv]) => (
-                      <div key={sk} className="flex justify-between bg-dsc-surface rounded px-1.5 py-0.5 text-[10px]">
-                        <span className="text-dsc-text-secondary truncate mr-1">{sk.replace(/([A-Z])/g, " $1").trim()}</span>
-                        <span className={`font-medium ${typeof sv === "boolean" ? boolColor(sv) : "text-dsc-text"}`}>{typeof sv === "boolean" ? (sv ? "✓" : "✗") : String(sv).substring(0, 30)}</span>
+                      <div key={sk} className={styles.objectEntry}>
+                        <span style={{ color: tokens.colorNeutralForeground3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginRight: 4 }}>
+                          {sk.replace(/([A-Z])/g, " $1").trim()}
+                        </span>
+                        <span style={{ fontWeight: tokens.fontWeightMedium as any, color: typeof sv === "boolean" ? boolColor(sv) : tokens.colorNeutralForeground1 }}>
+                          {typeof sv === "boolean" ? (sv ? "✓" : "✗") : String(sv).substring(0, 30)}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -195,5 +382,3 @@ function UnifiedResourceItem({ res }: { res: any }) {
     </div>
   );
 }
-
-

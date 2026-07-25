@@ -1,26 +1,58 @@
-import { type LucideIcon } from "lucide-react";
-import { Button } from "./button";
+"use client";
+
+import { makeStyles, tokens, Text, Button } from "@fluentui/react-components";
+import type { FluentIcon } from "@fluentui/react-icons";
 
 interface EmptyStateProps {
-  icon: LucideIcon;
+  icon: FluentIcon | React.ElementType;
   title: string;
   description: string;
   actionLabel?: string;
   onAction?: () => void;
 }
 
+const useStyles = makeStyles({
+  container: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: "64px",
+    paddingBottom: "64px",
+    textAlign: "center",
+  },
+  iconWrapper: {
+    borderRadius: "9999px",
+    backgroundColor: `${tokens.colorNeutralStroke1}30`,
+    padding: "16px",
+    marginBottom: "16px",
+  },
+  icon: {
+    fontSize: "32px",
+    color: tokens.colorNeutralForeground3,
+  },
+  title: {
+    marginBottom: "4px",
+  },
+  description: {
+    maxWidth: "384px",
+    marginBottom: "24px",
+    color: tokens.colorNeutralForeground3,
+  },
+});
+
 export function EmptyState({ icon: Icon, title, description, actionLabel, onAction }: EmptyStateProps) {
+  const styles = useStyles();
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="rounded-full bg-dsc-border/30 p-4 mb-4">
-        <Icon className="h-8 w-8 text-dsc-text-secondary" />
+    <div className={styles.container}>
+      <div className={styles.iconWrapper}>
+        <Icon className={styles.icon} />
       </div>
-      <h3 className="text-lg font-semibold text-dsc-text mb-1">{title}</h3>
-      <p className="text-sm text-dsc-text-secondary max-w-sm mb-6">{description}</p>
+      <Text size={500} weight="semibold" block className={styles.title}>{title}</Text>
+      <Text size={300} block className={styles.description}>{description}</Text>
       {actionLabel && onAction && (
-        <Button onClick={onAction}>{actionLabel}</Button>
+        <Button appearance="primary" onClick={onAction}>{actionLabel}</Button>
       )}
     </div>
   );
 }
-

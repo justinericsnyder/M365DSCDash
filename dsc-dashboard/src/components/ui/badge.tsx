@@ -1,39 +1,107 @@
-import { cn } from "@/lib/utils";
-import { cva, type VariantProps } from "class-variance-authority";
+"use client";
 
-const badgeVariants = cva(
-  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors",
-  {
-    variants: {
-      variant: {
-        default: "bg-dsc-border/40 text-dsc-text-secondary",
-        compliant: "bg-dsc-green-50 text-dsc-green border border-dsc-green/30",
-        drifted: "bg-dsc-yellow-50 text-dsc-yellow border border-dsc-yellow/30",
-        error: "bg-dsc-red-50 text-dsc-red border border-dsc-red/30",
-        unknown: "bg-dsc-border/30 text-dsc-text-secondary border border-dsc-border",
-        offline: "bg-dsc-border/20 text-dsc-text-secondary border border-dsc-border",
-        active: "bg-dsc-blue-50 text-dsc-blue border border-dsc-blue/30",
-        draft: "bg-dsc-border/30 text-dsc-text-secondary border border-dsc-border",
-        archived: "bg-dsc-border/20 text-dsc-text-secondary border border-dsc-border",
-        low: "bg-dsc-blue-50 text-dsc-blue",
-        medium: "bg-dsc-yellow-50 text-dsc-yellow",
-        high: "bg-dsc-red-50/70 text-dsc-red",
-        critical: "bg-dsc-red-50 text-dsc-red",
-        windows: "bg-dsc-blue-50 text-dsc-blue",
-        linux: "bg-dsc-green-50 text-dsc-green",
-        macos: "bg-dsc-border/30 text-dsc-text-secondary",
-      },
-    },
-    defaultVariants: { variant: "default" },
-  }
-);
+import { Badge as FluentBadge, makeStyles, mergeClasses, tokens } from "@fluentui/react-components";
 
-interface BadgeProps
-  extends React.HTMLAttributes<HTMLSpanElement>,
-    VariantProps<typeof badgeVariants> {}
+type BadgeVariant =
+  | "default" | "compliant" | "drifted" | "error" | "unknown" | "offline"
+  | "active" | "draft" | "archived"
+  | "low" | "medium" | "high" | "critical"
+  | "windows" | "linux" | "macos";
 
-export function Badge({ className, variant, ...props }: BadgeProps) {
+const useStyles = makeStyles({
+  base: {
+    display: "inline-flex",
+    alignItems: "center",
+    borderRadius: "9999px",
+    paddingLeft: "10px",
+    paddingRight: "10px",
+    paddingTop: "2px",
+    paddingBottom: "2px",
+    fontSize: tokens.fontSizeBase200,
+    fontWeight: tokens.fontWeightMedium,
+  },
+  default: {
+    backgroundColor: `${tokens.colorNeutralStroke1}60`,
+    color: tokens.colorNeutralForeground3,
+  },
+  compliant: {
+    backgroundColor: "#18241C",
+    color: "#7ECC9A",
+    border: `1px solid #7ECC9A50`,
+  },
+  drifted: {
+    backgroundColor: "#2E2010",
+    color: "#E8D07A",
+    border: `1px solid #E8D07A50`,
+  },
+  error: {
+    backgroundColor: "#3A0E14",
+    color: "#F28B8B",
+    border: `1px solid #F28B8B50`,
+  },
+  unknown: {
+    backgroundColor: `${tokens.colorNeutralStroke1}30`,
+    color: tokens.colorNeutralForeground3,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  offline: {
+    backgroundColor: `${tokens.colorNeutralStroke1}20`,
+    color: tokens.colorNeutralForeground3,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  active: {
+    backgroundColor: "#221830",
+    color: "#B89ADA",
+    border: `1px solid #B89ADA50`,
+  },
+  draft: {
+    backgroundColor: `${tokens.colorNeutralStroke1}30`,
+    color: tokens.colorNeutralForeground3,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  archived: {
+    backgroundColor: `${tokens.colorNeutralStroke1}20`,
+    color: tokens.colorNeutralForeground3,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  low: {
+    backgroundColor: "#221830",
+    color: "#B89ADA",
+  },
+  medium: {
+    backgroundColor: "#2E2010",
+    color: "#E8D07A",
+  },
+  high: {
+    backgroundColor: "#3A0E1490",
+    color: "#F28B8B",
+  },
+  critical: {
+    backgroundColor: "#3A0E14",
+    color: "#F28B8B",
+  },
+  windows: {
+    backgroundColor: "#221830",
+    color: "#B89ADA",
+  },
+  linux: {
+    backgroundColor: "#18241C",
+    color: "#7ECC9A",
+  },
+  macos: {
+    backgroundColor: `${tokens.colorNeutralStroke1}30`,
+    color: tokens.colorNeutralForeground3,
+  },
+});
+
+interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+  variant?: BadgeVariant;
+}
+
+export function Badge({ variant = "default", className, ...props }: BadgeProps) {
+  const styles = useStyles();
+  const variantStyle = styles[variant] || styles.default;
   return (
-    <span className={cn(badgeVariants({ variant }), className)} {...props} />
+    <span className={mergeClasses(styles.base, variantStyle, className)} {...props} />
   );
 }

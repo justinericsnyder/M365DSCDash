@@ -1,13 +1,43 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import {
+  makeStyles,
+  tokens,
+  Text,
+  Button,
+  Select,
+  Input,
+  Spinner,
+  TabList,
+  Tab,
+  Switch,
+  useToastController,
+  useId,
+  Toast,
+  ToastTitle,
+  Toaster,
+} from "@fluentui/react-components";
+import {
+  Shield20Regular,
+  PersonAvailable20Regular,
+  PersonDelete20Regular,
+  People20Regular,
+  Clock20Regular,
+  CheckmarkCircle20Regular,
+  DismissCircle20Regular,
+  Crown20Regular,
+  ProhibitedMultiple20Regular,
+  Settings20Regular,
+  DocumentBulletList20Regular,
+  ChevronLeft20Regular,
+  ChevronRight20Regular,
+  Filter20Regular,
+} from "@fluentui/react-icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { timeAgo } from "@/lib/utils";
-import { Shield, UserCheck, UserX, Users, Clock, CheckCircle2, XCircle, Crown, Ban, Settings, ScrollText, ChevronLeft, ChevronRight, Filter } from "lucide-react";
-import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
 interface UserRecord {
@@ -53,7 +83,45 @@ const actionLabels: Record<string, { label: string; variant: "compliant" | "drif
   SYNC_TRIGGERED: { label: "Sync", variant: "active" },
 };
 
+const useStyles = makeStyles({
+  page: { display: "flex", flexDirection: "column", gap: "24px", maxWidth: "900px" },
+  headerRow: { display: "flex", alignItems: "center", gap: "8px" },
+  statsGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" },
+  statCell: { display: "flex", alignItems: "center", gap: "12px" },
+  statIcon: { borderRadius: tokens.borderRadiusMedium, padding: "8px", display: "flex", alignItems: "center", justifyContent: "center" },
+  flagRow: {
+    display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px",
+    borderRadius: tokens.borderRadiusMedium, backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  pendingCard: {
+    display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px",
+    borderRadius: tokens.borderRadiusMedium, backgroundColor: "#2E201050",
+    border: "1px solid #E8D07A30",
+  },
+  pendingAvatar: {
+    height: "40px", width: "40px", borderRadius: "9999px",
+    backgroundColor: "#E8D07A30", display: "flex", alignItems: "center",
+    justifyContent: "center", color: "#E8D07A", fontWeight: tokens.fontWeightBold,
+  },
+  table: { width: "100%", fontSize: tokens.fontSizeBase200, borderCollapse: "collapse" },
+  th: {
+    textAlign: "left", padding: "10px 12px", fontWeight: tokens.fontWeightMedium,
+    color: tokens.colorNeutralForeground3, borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
+    backgroundColor: tokens.colorNeutralBackground1,
+  },
+  td: { padding: "10px 12px", borderBottom: `1px solid ${tokens.colorNeutralStroke2}` },
+  trHover: { ":hover": { backgroundColor: tokens.colorSubtleBackgroundHover } },
+  filterRow: { display: "flex", flexWrap: "wrap", alignItems: "center", gap: "12px" },
+  pagination: {
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    marginTop: "16px", paddingTop: "12px", borderTop: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  buttonGroup: { display: "flex", gap: "4px" },
+});
+
 export default function AdminPage() {
+  const styles = useStyles();
   const router = useRouter();
   const [tab, setTab] = useState<"users" | "audit">("users");
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -61,8 +129,6 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [flags, setFlags] = useState<Record<string, boolean>>({ showNodes: true, showConfigurations: true, showImport: true });
   const [togglingFlag, setTogglingFlag] = useState<string | null>(null);
-
-  // Audit log state
   const [auditLogs, setAuditLogs] = useState<AuditEntry[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditPage, setAuditPage] = useState(1);
@@ -70,6 +136,8 @@ export default function AdminPage() {
   const [auditTotal, setAuditTotal] = useState(0);
   const [auditFilter, setAuditFilter] = useState("");
   const [auditEmailFilter, setAuditEmailFilter] = useState("");
+  const toasterId = useId("admin-toaster");
+  const { dispatchToast } = useToastController(toasterId);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -84,14 +152,12 @@ export default function AdminPage() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  // Fetch feature flags
   useEffect(() => {
     fetch("/api/admin/flags").then((r) => r.json()).then((data) => {
       if (data.flags) setFlags(data.flags);
     }).catch(() => {});
   }, []);
 
-  // Fetch audit logs
   const fetchAuditLogs = useCallback(async () => {
     setAuditLoading(true);
     try {
@@ -100,112 +166,83 @@ export default function AdminPage() {
       if (auditEmailFilter) params.set("email", auditEmailFilter);
       const res = await fetch(`/api/admin/audit?${params}`);
       const data = await res.json();
-      if (data.logs) {
-        setAuditLogs(data.logs);
-        setAuditPages(data.pages);
-        setAuditTotal(data.total);
-      }
+      if (data.logs) { setAuditLogs(data.logs); setAuditPages(data.pages); setAuditTotal(data.total); }
     } catch { /* ignore */ }
     finally { setAuditLoading(false); }
   }, [auditPage, auditFilter, auditEmailFilter]);
 
-  useEffect(() => {
-    if (tab === "audit") fetchAuditLogs();
-  }, [tab, fetchAuditLogs]);
+  useEffect(() => { if (tab === "audit") fetchAuditLogs(); }, [tab, fetchAuditLogs]);
 
   const handleToggleFlag = async (flag: string) => {
     setTogglingFlag(flag);
     try {
-      const res = await fetch("/api/admin/flags", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flag, enabled: !flags[flag] }),
-      });
+      const res = await fetch("/api/admin/flags", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flag, enabled: !flags[flag] }) });
       const data = await res.json();
-      if (data.success) {
-        setFlags(data.flags);
-        toast.success(`${flag} ${data.flags[flag] ? "enabled" : "disabled"}`);
-      } else toast.error(data.error);
-    } catch { toast.error("Failed to toggle"); }
+      if (data.success) { setFlags(data.flags); dispatchToast(<Toast><ToastTitle>{flag} {data.flags[flag] ? "enabled" : "disabled"}</ToastTitle></Toast>, { intent: "success" }); }
+      else dispatchToast(<Toast><ToastTitle>{data.error}</ToastTitle></Toast>, { intent: "error" });
+    } catch { dispatchToast(<Toast><ToastTitle>Failed to toggle</ToastTitle></Toast>, { intent: "error" }); }
     finally { setTogglingFlag(null); }
   };
 
   const handleAction = async (userId: string, action: string, label: string) => {
-    if (action === "reject" && !confirm(`Are you sure you want to reject and remove this user?`)) return;
+    if (action === "reject" && !confirm("Are you sure you want to reject and remove this user?")) return;
     try {
-      const res = await fetch("/api/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, action }),
-      });
+      const res = await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, action }) });
       const data = await res.json();
-      if (data.success) { toast.success(data.message); fetchUsers(); }
-      else toast.error(data.error);
-    } catch { toast.error(`Failed to ${label}`); }
+      if (data.success) { dispatchToast(<Toast><ToastTitle>{data.message}</ToastTitle></Toast>, { intent: "success" }); fetchUsers(); }
+      else dispatchToast(<Toast><ToastTitle>{data.error}</ToastTitle></Toast>, { intent: "error" });
+    } catch { dispatchToast(<Toast><ToastTitle>Failed to {label}</ToastTitle></Toast>, { intent: "error" }); }
   };
 
   const pending = users.filter((u) => u.role === "PENDING" && !u.isApproved);
   const approved = users.filter((u) => u.isApproved);
 
-  if (loading) return <div className="flex justify-center py-16"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-dsc-blue" /></div>;
-  if (error) return <div className="text-center py-16 text-dsc-red">{error}</div>;
+  if (loading) return <div style={{ display: "flex", justifyContent: "center", padding: 64 }}><Spinner size="large" /></div>;
+  if (error) return <div style={{ textAlign: "center", padding: 64, color: "#F28B8B" }}><Text>{error}</Text></div>;
 
   return (
-    <div className="space-y-6 stagger-children max-w-4xl">
+    <div className={styles.page}>
+      <Toaster toasterId={toasterId} />
       <div>
-        <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-bold text-dsc-text">Admin Panel</h2>
-          <Badge variant="active"><Shield className="h-3 w-3 mr-0.5" />Admin</Badge>
+        <div className={styles.headerRow}>
+          <Text size={700} weight="bold">Admin Panel</Text>
+          <Badge variant="active">Admin</Badge>
         </div>
-        <p className="text-sm text-dsc-text-secondary mt-1">Manage user accounts, access approvals, and security audit trail</p>
+        <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>Manage user accounts, access approvals, and security audit trail</Text>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-dsc-border">
-        {[
-          { key: "users" as const, label: "Users & Settings", icon: Users },
-          { key: "audit" as const, label: `Audit Log${auditTotal ? ` (${auditTotal})` : ""}`, icon: ScrollText },
-        ].map((t) => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${tab === t.key ? "border-dsc-blue text-dsc-text" : "border-transparent text-dsc-text-secondary hover:text-dsc-text"}`}>
-            <t.icon className="h-3.5 w-3.5" />{t.label}
-          </button>
-        ))}
-      </div>
+      <TabList selectedValue={tab} onTabSelect={(_, data) => setTab(data.value as "users" | "audit")}>
+        <Tab value="users" icon={<People20Regular />}>Users &amp; Settings</Tab>
+        <Tab value="audit" icon={<DocumentBulletList20Regular />}>Audit Log{auditTotal ? ` (${auditTotal})` : ""}</Tab>
+      </TabList>
 
       {tab === "users" && (
         <>
           {/* Stats */}
-          <div className="grid grid-cols-4 gap-4">
-            <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-blue-50 p-2"><Users className="h-4 w-4 text-dsc-blue" /></div><div><p className="text-xl font-bold">{users.length}</p><p className="text-xs text-dsc-text-secondary">Total Users</p></div></div></Card>
-            <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-yellow-50 p-2"><Clock className="h-4 w-4 text-dsc-yellow" /></div><div><p className="text-xl font-bold text-dsc-yellow">{pending.length}</p><p className="text-xs text-dsc-text-secondary">Pending</p></div></div></Card>
-            <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-dsc-green-50 p-2"><CheckCircle2 className="h-4 w-4 text-dsc-green" /></div><div><p className="text-xl font-bold">{approved.length}</p><p className="text-xs text-dsc-text-secondary">Approved</p></div></div></Card>
-            <Card><div className="flex items-center gap-3"><div className="rounded-lg bg-purple-50 p-2"><Crown className="h-4 w-4 text-purple-600" /></div><div><p className="text-xl font-bold">{users.filter((u) => u.role === "ADMIN").length}</p><p className="text-xs text-dsc-text-secondary">Admins</p></div></div></Card>
+          <div className={styles.statsGrid}>
+            <Card><div className={styles.statCell}><div className={styles.statIcon} style={{ backgroundColor: "#221830" }}><People20Regular style={{ color: "#B89ADA" }} /></div><div><Text size={600} weight="bold">{users.length}</Text><Text size={200} style={{ color: tokens.colorNeutralForeground3 }} block>Total Users</Text></div></div></Card>
+            <Card><div className={styles.statCell}><div className={styles.statIcon} style={{ backgroundColor: "#2E2010" }}><Clock20Regular style={{ color: "#E8D07A" }} /></div><div><Text size={600} weight="bold" style={{ color: "#E8D07A" }}>{pending.length}</Text><Text size={200} style={{ color: tokens.colorNeutralForeground3 }} block>Pending</Text></div></div></Card>
+            <Card><div className={styles.statCell}><div className={styles.statIcon} style={{ backgroundColor: "#18241C" }}><CheckmarkCircle20Regular style={{ color: "#7ECC9A" }} /></div><div><Text size={600} weight="bold">{approved.length}</Text><Text size={200} style={{ color: tokens.colorNeutralForeground3 }} block>Approved</Text></div></div></Card>
+            <Card><div className={styles.statCell}><div className={styles.statIcon} style={{ backgroundColor: "#2D1B69" }}><Crown20Regular style={{ color: "#7C3AED" }} /></div><div><Text size={600} weight="bold">{users.filter((u) => u.role === "ADMIN").length}</Text><Text size={200} style={{ color: tokens.colorNeutralForeground3 }} block>Admins</Text></div></div></Card>
           </div>
 
           {/* Feature Flags */}
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Settings className="h-4 w-4 text-dsc-text-secondary" />Page Visibility</CardTitle></CardHeader>
+            <CardHeader><CardTitle><span style={{ display: "flex", alignItems: "center", gap: 8 }}><Settings20Regular style={{ color: tokens.colorNeutralForeground3 }} /> Page Visibility</span></CardTitle></CardHeader>
             <CardContent>
-              <p className="text-xs text-dsc-text-secondary mb-3">Toggle pages on or off for all users. Disabled pages are hidden from the navigation.</p>
-              <div className="space-y-2">
+              <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginBottom: 12 }} block>Toggle pages on or off for all users.</Text>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {[
                   { flag: "showNodes", label: "Nodes", desc: "Infrastructure node management page" },
                   { flag: "showConfigurations", label: "Configurations", desc: "DSC configuration documents page" },
                   { flag: "showImport", label: "Import", desc: "DSC document import page" },
                 ].map((item) => (
-                  <div key={item.flag} className="flex items-center justify-between p-3 rounded-lg bg-dsc-bg border border-dsc-border">
+                  <div key={item.flag} className={styles.flagRow}>
                     <div>
-                      <p className="text-sm font-medium text-dsc-text">{item.label}</p>
-                      <p className="text-[10px] text-dsc-text-secondary">{item.desc}</p>
+                      <Text size={300} weight="medium" block>{item.label}</Text>
+                      <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>{item.desc}</Text>
                     </div>
-                    <button
-                      onClick={() => handleToggleFlag(item.flag)}
-                      disabled={togglingFlag === item.flag}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ${flags[item.flag] ? "bg-dsc-green" : "bg-dsc-border"}`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${flags[item.flag] ? "translate-x-6" : "translate-x-1"}`} />
-                    </button>
+                    <Switch checked={flags[item.flag]} onChange={() => handleToggleFlag(item.flag)} disabled={togglingFlag === item.flag} />
                   </div>
                 ))}
               </div>
@@ -214,29 +251,23 @@ export default function AdminPage() {
 
           {/* Pending Approvals */}
           {pending.length > 0 && (
-            <Card className="border-dsc-yellow/30">
-              <CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4 text-dsc-yellow" />Pending Approvals ({pending.length})</CardTitle></CardHeader>
+            <Card>
+              <CardHeader><CardTitle><span style={{ display: "flex", alignItems: "center", gap: 8 }}><Clock20Regular style={{ color: "#E8D07A" }} /> Pending Approvals ({pending.length})</span></CardTitle></CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                   {pending.map((u) => (
-                    <div key={u.id} className="flex items-center justify-between p-4 rounded-lg bg-dsc-yellow-50/50 border border-dsc-yellow/20">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-dsc-yellow/20 flex items-center justify-center text-dsc-yellow font-bold">
-                          {u.name?.charAt(0) || u.email.charAt(0).toUpperCase()}
-                        </div>
+                    <div key={u.id} className={styles.pendingCard}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div className={styles.pendingAvatar}>{u.name?.charAt(0) || u.email.charAt(0).toUpperCase()}</div>
                         <div>
-                          <p className="font-semibold text-dsc-text">{u.name || "No name"}</p>
-                          <p className="text-sm text-dsc-text-secondary">{u.email}</p>
-                          <p className="text-xs text-dsc-text-secondary">Registered {timeAgo(u.createdAt)}</p>
+                          <Text weight="semibold" block>{u.name || "No name"}</Text>
+                          <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>{u.email}</Text>
+                          <Text size={200} style={{ color: tokens.colorNeutralForeground3 }} block>Registered {timeAgo(u.createdAt)}</Text>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="success" size="sm" onClick={() => handleAction(u.id, "approve", "approve")}>
-                          <UserCheck className="h-3.5 w-3.5" />Approve
-                        </Button>
-                        <Button variant="danger" size="sm" onClick={() => handleAction(u.id, "reject", "reject")}>
-                          <UserX className="h-3.5 w-3.5" />Reject
-                        </Button>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <Button appearance="primary" size="small" style={{ backgroundColor: "#2F855A" }} icon={<PersonAvailable20Regular />} onClick={() => handleAction(u.id, "approve", "approve")}>Approve</Button>
+                        <Button appearance="primary" size="small" style={{ backgroundColor: "#C53030" }} icon={<PersonDelete20Regular />} onClick={() => handleAction(u.id, "reject", "reject")}>Reject</Button>
                       </div>
                     </div>
                   ))}
@@ -247,49 +278,36 @@ export default function AdminPage() {
 
           {/* All Users */}
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4 text-dsc-blue" />All Users</CardTitle></CardHeader>
+            <CardHeader><CardTitle><span style={{ display: "flex", alignItems: "center", gap: 8 }}><People20Regular style={{ color: "#B89ADA" }} /> All Users</span></CardTitle></CardHeader>
             <CardContent>
               {users.length === 0 ? (
-                <EmptyState icon={Users} title="No users" description="No registered users yet." />
+                <EmptyState icon={People20Regular} title="No users" description="No registered users yet." />
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead><tr className="border-b border-dsc-border bg-dsc-bg">
-                      <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">User</th>
-                      <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">Role</th>
-                      <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">Status</th>
-                      <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">Last Login</th>
-                      <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">Sessions</th>
-                      <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">Actions</th>
+                <div style={{ overflowX: "auto" }}>
+                  <table className={styles.table}>
+                    <thead><tr>
+                      <th className={styles.th}>User</th>
+                      <th className={styles.th}>Role</th>
+                      <th className={styles.th}>Status</th>
+                      <th className={styles.th}>Last Login</th>
+                      <th className={styles.th}>Sessions</th>
+                      <th className={styles.th}>Actions</th>
                     </tr></thead>
-                    <tbody className="divide-y divide-dsc-border">
+                    <tbody>
                       {users.map((u) => (
-                        <tr key={u.id} className="hover:bg-dsc-bg">
-                          <td className="py-2.5 px-3">
-                            <p className="font-medium">{u.name || "—"}</p>
-                            <p className="text-xs text-dsc-text-secondary">{u.email}</p>
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <Badge variant={u.role === "ADMIN" ? "active" : u.role === "USER" ? "compliant" : "drifted"}>
-                              {u.role === "ADMIN" && <Shield className="h-3 w-3 mr-0.5" />}{u.role}
-                            </Badge>
-                          </td>
-                          <td className="py-2.5 px-3">
-                            {u.isApproved ? <Badge variant="compliant">Approved</Badge> : <Badge variant="drifted">Pending</Badge>}
-                          </td>
-                          <td className="py-2.5 px-3 text-dsc-text-secondary">{timeAgo(u.lastLoginAt)}</td>
-                          <td className="py-2.5 px-3">{u._count.sessions}</td>
-                          <td className="py-2.5 px-3">
-                            <div className="flex gap-1">
+                        <tr key={u.id} className={styles.trHover}>
+                          <td className={styles.td}><Text weight="medium" block>{u.name || "—"}</Text><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{u.email}</Text></td>
+                          <td className={styles.td}><Badge variant={u.role === "ADMIN" ? "active" : u.role === "USER" ? "compliant" : "drifted"}>{u.role}</Badge></td>
+                          <td className={styles.td}>{u.isApproved ? <Badge variant="compliant">Approved</Badge> : <Badge variant="drifted">Pending</Badge>}</td>
+                          <td className={styles.td}><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{timeAgo(u.lastLoginAt)}</Text></td>
+                          <td className={styles.td}>{u._count.sessions}</td>
+                          <td className={styles.td}>
+                            <div className={styles.buttonGroup}>
                               {u.role !== "ADMIN" && u.isApproved && (
-                                <Button variant="ghost" size="sm" onClick={() => handleAction(u.id, "promote", "promote")}>
-                                  <Crown className="h-3 w-3" />
-                                </Button>
+                                <Button appearance="subtle" size="small" icon={<Crown20Regular />} onClick={() => handleAction(u.id, "promote", "promote")} />
                               )}
                               {u.isApproved && u.role !== "ADMIN" && (
-                                <Button variant="ghost" size="sm" onClick={() => handleAction(u.id, "revoke", "revoke")}>
-                                  <Ban className="h-3 w-3 text-dsc-red" />
-                                </Button>
+                                <Button appearance="subtle" size="small" icon={<ProhibitedMultiple20Regular style={{ color: "#F28B8B" }} />} onClick={() => handleAction(u.id, "revoke", "revoke")} />
                               )}
                             </div>
                           </td>
@@ -306,93 +324,73 @@ export default function AdminPage() {
 
       {tab === "audit" && (
         <>
-          {/* Filters */}
           <Card>
             <CardContent>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5 text-sm text-dsc-text-secondary">
-                  <Filter className="h-3.5 w-3.5" />Filters
-                </div>
-                <select
-                  value={auditFilter}
-                  onChange={(e) => { setAuditFilter(e.target.value); setAuditPage(1); }}
-                  className="text-sm rounded-lg border border-dsc-border bg-dsc-bg text-dsc-text px-3 py-1.5"
-                >
+              <div className={styles.filterRow}>
+                <Filter20Regular style={{ color: tokens.colorNeutralForeground3 }} />
+                <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>Filters</Text>
+                <Select value={auditFilter} onChange={(e) => { setAuditFilter((e.target as HTMLSelectElement).value); setAuditPage(1); }} appearance="filled-darker">
                   <option value="">All Actions</option>
                   <option value="LOGIN_SUCCESS">Login Success</option>
                   <option value="LOGIN_FAILED">Login Failed</option>
                   <option value="REGISTER">Register</option>
                   <option value="PASSWORD_CHANGED">Password Changed</option>
-                  <option value="PASSWORD_CHANGE_FAILED">Password Change Failed</option>
                   <option value="ACCOUNT_LOCKED">Account Locked</option>
                   <option value="LOGOUT">Logout</option>
                   <option value="TENANT_CONNECTED">Tenant Connected</option>
                   <option value="SYNC_TRIGGERED">Sync Triggered</option>
-                </select>
-                <input
-                  type="text"
+                </Select>
+                <Input
                   placeholder="Filter by email..."
                   value={auditEmailFilter}
-                  onChange={(e) => { setAuditEmailFilter(e.target.value); setAuditPage(1); }}
-                  className="text-sm rounded-lg border border-dsc-border bg-dsc-bg text-dsc-text px-3 py-1.5 w-56 placeholder:text-dsc-text-secondary"
+                  onChange={(e) => { setAuditEmailFilter((e.target as HTMLInputElement).value); setAuditPage(1); }}
+                  appearance="filled-darker"
+                  style={{ width: 224 }}
                 />
-                <span className="text-xs text-dsc-text-secondary ml-auto">{auditTotal} entries</span>
+                <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginLeft: "auto" }}>{auditTotal} entries</Text>
               </div>
             </CardContent>
           </Card>
 
-          {/* Audit Log Table */}
           <Card>
             <CardContent>
               {auditLoading ? (
-                <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-dsc-blue" /></div>
+                <div style={{ display: "flex", justifyContent: "center", padding: 32 }}><Spinner /></div>
               ) : auditLogs.length === 0 ? (
-                <EmptyState icon={ScrollText} title="No audit entries" description="No audit log entries found. Events will appear here as users interact with the system." />
+                <EmptyState icon={DocumentBulletList20Regular} title="No audit entries" description="No audit log entries found." />
               ) : (
                 <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead><tr className="border-b border-dsc-border bg-dsc-bg">
-                        <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">Time</th>
-                        <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">Action</th>
-                        <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">Email</th>
-                        <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">IP Address</th>
-                        <th className="text-left py-2.5 px-3 font-medium text-dsc-text-secondary">Details</th>
+                  <div style={{ overflowX: "auto" }}>
+                    <table className={styles.table}>
+                      <thead><tr>
+                        <th className={styles.th}>Time</th>
+                        <th className={styles.th}>Action</th>
+                        <th className={styles.th}>Email</th>
+                        <th className={styles.th}>IP Address</th>
+                        <th className={styles.th}>Details</th>
                       </tr></thead>
-                      <tbody className="divide-y divide-dsc-border">
+                      <tbody>
                         {auditLogs.map((log) => {
                           const meta = actionLabels[log.action] || { label: log.action, variant: "default" as const };
                           return (
-                            <tr key={log.id} className={`hover:bg-dsc-bg ${!log.success ? "bg-dsc-red/5" : ""}`}>
-                              <td className="py-2.5 px-3 text-xs text-dsc-text-secondary whitespace-nowrap">
-                                {new Date(log.createdAt).toLocaleString()}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <Badge variant={meta.variant}>{meta.label}</Badge>
-                              </td>
-                              <td className="py-2.5 px-3 text-dsc-text font-mono text-xs">{log.email || "—"}</td>
-                              <td className="py-2.5 px-3 text-dsc-text-secondary font-mono text-xs">{log.ipAddress || "—"}</td>
-                              <td className="py-2.5 px-3 text-xs text-dsc-text-secondary max-w-[200px] truncate" title={log.details || ""}>
-                                {log.details || "—"}
-                              </td>
+                            <tr key={log.id} className={styles.trHover} style={!log.success ? { backgroundColor: "#F28B8B08" } : undefined}>
+                              <td className={styles.td} style={{ whiteSpace: "nowrap" }}><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{new Date(log.createdAt).toLocaleString()}</Text></td>
+                              <td className={styles.td}><Badge variant={meta.variant}>{meta.label}</Badge></td>
+                              <td className={styles.td}><Text size={200} style={{ fontFamily: "monospace" }}>{log.email || "—"}</Text></td>
+                              <td className={styles.td}><Text size={200} style={{ fontFamily: "monospace", color: tokens.colorNeutralForeground3 }}>{log.ipAddress || "—"}</Text></td>
+                              <td className={styles.td} style={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={log.details || ""}><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{log.details || "—"}</Text></td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
-
-                  {/* Pagination */}
                   {auditPages > 1 && (
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-dsc-border">
-                      <span className="text-xs text-dsc-text-secondary">Page {auditPage} of {auditPages}</span>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" disabled={auditPage <= 1} onClick={() => setAuditPage((p) => p - 1)}>
-                          <ChevronLeft className="h-3.5 w-3.5" />Prev
-                        </Button>
-                        <Button variant="ghost" size="sm" disabled={auditPage >= auditPages} onClick={() => setAuditPage((p) => p + 1)}>
-                          Next<ChevronRight className="h-3.5 w-3.5" />
-                        </Button>
+                    <div className={styles.pagination}>
+                      <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Page {auditPage} of {auditPages}</Text>
+                      <div className={styles.buttonGroup}>
+                        <Button appearance="subtle" size="small" icon={<ChevronLeft20Regular />} disabled={auditPage <= 1} onClick={() => setAuditPage((p) => p - 1)}>Prev</Button>
+                        <Button appearance="subtle" size="small" disabled={auditPage >= auditPages} onClick={() => setAuditPage((p) => p + 1)}>Next<ChevronRight20Regular /></Button>
                       </div>
                     </div>
                   )}
@@ -405,4 +403,3 @@ export default function AdminPage() {
     </div>
   );
 }
-

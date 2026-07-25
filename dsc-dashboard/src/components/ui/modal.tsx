@@ -1,9 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { cn } from "@/lib/utils";
-import { X } from "lucide-react";
+import {
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
+  DialogContent,
+  DialogTrigger,
+  Button,
+} from "@fluentui/react-components";
+import { Dismiss24Regular } from "@fluentui/react-icons";
 
 interface ModalProps {
   open: boolean;
@@ -15,47 +21,31 @@ interface ModalProps {
 }
 
 export function Modal({ open, onClose, title, children, className, wide }: ModalProps) {
-  const overlayRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
-    document.addEventListener("keydown", handler);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handler);
-      document.body.style.overflow = "";
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-
-  // Use portal to render at document body — escapes any parent overflow/z-index context
-  return createPortal(
-    <div
-      ref={overlayRef}
-      className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      style={{ zIndex: 9999 }}
-      onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
-    >
-      <div className={cn(
-        "bg-dsc-surface rounded-xl border border-dsc-border shadow-2xl max-h-[85vh] overflow-hidden flex flex-col animate-fade-scale-in",
-        wide ? "w-full max-w-3xl" : "w-full max-w-lg",
-        className
-      )}>
-        {title && (
-          <div className="flex items-center justify-between px-5 py-4 border-b border-dsc-border flex-shrink-0">
-            <h3 className="text-base font-semibold text-dsc-text">{title}</h3>
-            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-dsc-border/30 transition-colors">
-              <X className="h-4 w-4 text-dsc-text-secondary" />
-            </button>
-          </div>
-        )}
-        <div className="overflow-y-auto flex-1 px-5 py-4">
-          {children}
-        </div>
-      </div>
-    </div>,
-    document.body
+  return (
+    <Dialog open={open} onOpenChange={(_, data) => { if (!data.open) onClose(); }}>
+      <DialogSurface style={{ maxWidth: wide ? "768px" : "512px", width: "90vw" }}>
+        <DialogBody>
+          {title && (
+            <DialogTitle
+              action={
+                <DialogTrigger action="close">
+                  <Button
+                    appearance="subtle"
+                    aria-label="Close"
+                    icon={<Dismiss24Regular />}
+                    onClick={onClose}
+                  />
+                </DialogTrigger>
+              }
+            >
+              {title}
+            </DialogTitle>
+          )}
+          <DialogContent className={className}>
+            {children}
+          </DialogContent>
+        </DialogBody>
+      </DialogSurface>
+    </Dialog>
   );
 }

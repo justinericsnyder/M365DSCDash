@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+"use client";
 
 interface SparklineProps {
   data: number[];
@@ -13,7 +13,7 @@ export function Sparkline({
   data,
   width = 120,
   height = 32,
-  color = "#38A169",
+  color = "#7ECC9A",
   fillColor,
   className,
 }: SparklineProps) {
@@ -40,7 +40,8 @@ export function Sparkline({
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      className={cn("inline-block", className)}
+      className={className}
+      style={{ display: "inline-block", verticalAlign: "middle" }}
     >
       {fillColor && (
         <path d={fillPath} fill={fillColor} opacity={0.15} />
@@ -53,7 +54,6 @@ export function Sparkline({
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      {/* Current value dot */}
       <circle
         cx={padding + innerW}
         cy={padding + innerH - ((data[data.length - 1] - min) / range) * innerH}

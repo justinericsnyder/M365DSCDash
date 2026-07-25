@@ -1,35 +1,46 @@
-import { cn } from "@/lib/utils";
+"use client";
+
+import { makeStyles, mergeClasses } from "@fluentui/react-components";
 
 const statusColors: Record<string, string> = {
-  COMPLIANT: "bg-dsc-green",
-  DRIFTED: "bg-dsc-yellow",
-  ERROR: "bg-dsc-red",
-  UNKNOWN: "bg-dsc-text-secondary/50",
-  OFFLINE: "bg-dsc-text-secondary/30",
-  ACTIVE: "bg-dsc-blue",
-  DRAFT: "bg-dsc-text-secondary/50",
-  ARCHIVED: "bg-dsc-text-secondary/30",
-  PENDING: "bg-dsc-yellow",
-  APPLYING: "bg-dsc-blue",
-  APPLIED: "bg-dsc-green",
-  FAILED: "bg-dsc-red",
-  DISABLED: "bg-dsc-text-secondary/40",
-  MISSING: "bg-dsc-red/60",
-  EXTRA: "bg-dsc-yellow/60",
-  LOW: "bg-dsc-blue",
-  MEDIUM: "bg-dsc-yellow",
-  HIGH: "bg-dsc-red/80",
-  CRITICAL: "bg-dsc-red",
+  COMPLIANT: "#7ECC9A",
+  DRIFTED: "#E8D07A",
+  ERROR: "#F28B8B",
+  UNKNOWN: "#D4A0B480",
+  OFFLINE: "#D4A0B450",
+  ACTIVE: "#B89ADA",
+  DRAFT: "#D4A0B480",
+  ARCHIVED: "#D4A0B450",
+  PENDING: "#E8D07A",
+  APPLYING: "#B89ADA",
+  APPLIED: "#7ECC9A",
+  FAILED: "#F28B8B",
+  DISABLED: "#D4A0B460",
+  MISSING: "#F28B8B99",
+  EXTRA: "#E8D07A99",
+  LOW: "#B89ADA",
+  MEDIUM: "#E8D07A",
+  HIGH: "#F28B8BCC",
+  CRITICAL: "#F28B8B",
 };
 
+const useStyles = makeStyles({
+  dot: {
+    display: "inline-block",
+    height: "8px",
+    width: "8px",
+    borderRadius: "9999px",
+  },
+});
+
 export function StatusDot({ status, pulse = false }: { status: string; pulse?: boolean }) {
+  const styles = useStyles();
+  const color = statusColors[status] || "#D4A0B480";
+
   return (
     <span
-      className={cn(
-        "inline-block h-2 w-2 rounded-full",
-        statusColors[status] || "bg-dsc-text-secondary/50",
-        pulse && "pulse-dot"
-      )}
+      className={mergeClasses(styles.dot, pulse ? "pulse-dot" : undefined)}
+      style={{ backgroundColor: color }}
     />
   );
 }

@@ -3,41 +3,191 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
-import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Server, FileCode2, AlertTriangle, Upload,
-  Settings, Cloud, ShieldCheck, History, Menu, X,
-  Sparkles, Blocks,
-} from "lucide-react";
+  makeStyles,
+  tokens,
+  Text,
+  Divider,
+  mergeClasses,
+} from "@fluentui/react-components";
+import {
+  Board20Regular,
+  Server20Regular,
+  Document20Regular,
+  Warning20Regular,
+  ArrowUpload20Regular,
+  Settings20Regular,
+  Cloud20Regular,
+  ShieldCheckmark20Regular,
+  History20Regular,
+  Navigation20Regular,
+  Dismiss20Regular,
+  Sparkle20Regular,
+  Apps20Regular,
+  CircleFilled,
+} from "@fluentui/react-icons";
 
 interface NavItem {
   href: string;
   label: string;
   icon: React.ElementType;
-  color: string;
-  flag?: string; // feature flag key — if set, item is hidden when flag is false
+  flag?: string;
 }
 
 const navItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, color: "text-dsc-blue" },
-  { href: "/ai", label: "AI Governance", icon: Sparkles, color: "text-purple-600" },
-  { href: "/m365", label: "M365 DSC", icon: Cloud, color: "text-dsc-blue" },
-  { href: "/purview", label: "Purview Labels", icon: ShieldCheck, color: "text-purple-600" },
-  { href: "/nodes", label: "Nodes", icon: Server, color: "text-dsc-green", flag: "showNodes" },
-  { href: "/configurations", label: "Configurations", icon: FileCode2, color: "text-dsc-yellow", flag: "showConfigurations" },
-  { href: "/resources", label: "Resources", icon: Blocks, color: "text-dsc-red" },
-  { href: "/drift", label: "Drift Events", icon: AlertTriangle, color: "text-dsc-yellow" },
-  { href: "/import", label: "Import", icon: Upload, color: "text-dsc-blue", flag: "showImport" },
-  { href: "/settings", label: "Settings", icon: Settings, color: "text-dsc-text-secondary" },
-  { href: "/changelog", label: "Changelog", icon: History, color: "text-dsc-text-secondary" },
+  { href: "/", label: "Dashboard", icon: Board20Regular },
+  { href: "/ai", label: "AI Governance", icon: Sparkle20Regular },
+  { href: "/m365", label: "M365 DSC", icon: Cloud20Regular },
+  { href: "/purview", label: "Purview Labels", icon: ShieldCheckmark20Regular },
+  { href: "/nodes", label: "Nodes", icon: Server20Regular, flag: "showNodes" },
+  { href: "/configurations", label: "Configurations", icon: Document20Regular, flag: "showConfigurations" },
+  { href: "/resources", label: "Resources", icon: Apps20Regular },
+  { href: "/drift", label: "Drift Events", icon: Warning20Regular },
+  { href: "/import", label: "Import", icon: ArrowUpload20Regular, flag: "showImport" },
+  { href: "/settings", label: "Settings", icon: Settings20Regular },
+  { href: "/changelog", label: "Changelog", icon: History20Regular },
 ];
+
+const useStyles = makeStyles({
+  sidebar: {
+    position: "fixed",
+    left: 0,
+    top: 0,
+    zIndex: 30,
+    height: "100vh",
+    width: "240px",
+    display: "flex",
+    flexDirection: "column",
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderRight: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  sidebarMobile: {
+    position: "fixed",
+    left: 0,
+    top: 0,
+    zIndex: 50,
+    height: "100vh",
+    width: "240px",
+    display: "flex",
+    flexDirection: "column",
+    backgroundColor: tokens.colorNeutralBackground3,
+    borderRight: `1px solid ${tokens.colorNeutralStroke1}`,
+    transform: "translateX(-100%)",
+    transitionProperty: "transform",
+    transitionDuration: "200ms",
+    transitionTimingFunction: "ease",
+  },
+  sidebarMobileOpen: {
+    transform: "translateX(0)",
+  },
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 40,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    backdropFilter: "blur(4px)",
+  },
+  hamburger: {
+    position: "fixed",
+    top: "16px",
+    left: "16px",
+    zIndex: 50,
+    padding: "8px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground2,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    cursor: "pointer",
+    display: "none",
+    "@media (max-width: 1023px)": {
+      display: "block",
+    },
+  },
+  desktopOnly: {
+    "@media (max-width: 1023px)": {
+      display: "none",
+    },
+  },
+  mobileOnly: {
+    "@media (min-width: 1024px)": {
+      display: "none",
+    },
+  },
+  header: {
+    display: "flex",
+    height: "64px",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingLeft: "20px",
+    paddingRight: "20px",
+    borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  logo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  logoImg: {
+    height: "32px",
+    width: "32px",
+    borderRadius: tokens.borderRadiusMedium,
+  },
+  nav: {
+    flex: 1,
+    overflowY: "auto",
+    padding: "16px 12px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  navItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    borderRadius: tokens.borderRadiusMedium,
+    padding: "8px 12px",
+    fontSize: tokens.fontSizeBase300,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground2,
+    textDecoration: "none",
+    transitionProperty: "background-color, color",
+    transitionDuration: "150ms",
+    ":hover": {
+      backgroundColor: tokens.colorSubtleBackgroundHover,
+      color: tokens.colorNeutralForeground1,
+    },
+  },
+  navItemActive: {
+    backgroundColor: tokens.colorNeutralBackground2,
+    color: tokens.colorNeutralForeground1,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+    boxShadow: tokens.shadow2,
+  },
+  footer: {
+    borderTop: `1px solid ${tokens.colorNeutralStroke1}`,
+    padding: "16px",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  closeBtn: {
+    padding: "4px",
+    borderRadius: tokens.borderRadiusMedium,
+    cursor: "pointer",
+    backgroundColor: "transparent",
+    border: "none",
+    color: tokens.colorNeutralForeground2,
+    ":hover": {
+      backgroundColor: tokens.colorSubtleBackgroundHover,
+    },
+  },
+});
 
 export function Sidebar() {
   const pathname = usePathname();
+  const styles = useStyles();
   const [open, setOpen] = useState(false);
   const [flags, setFlags] = useState<Record<string, boolean>>({ showNodes: true, showConfigurations: true, showImport: true });
 
-  // Fetch feature flags
   const fetchFlags = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/flags");
@@ -54,7 +204,6 @@ export function Sidebar() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
-  // Filter nav items based on flags
   const visibleItems = navItems.filter((item) => {
     if (!item.flag) return true;
     return flags[item.flag] !== false;
@@ -62,52 +211,61 @@ export function Sidebar() {
 
   const sidebarContent = (
     <>
-      <div className="flex h-16 items-center justify-between border-b border-dsc-border px-5">
-        <div className="flex items-center gap-3">
-          <img src="/logo.svg" alt="AI DSC Dashboard" className="h-8 w-8 rounded-lg" />
+      <div className={styles.header}>
+        <div className={styles.logo}>
+          <img src="/logo.svg" alt="AI DSC Dashboard" className={styles.logoImg} />
           <div>
-            <h1 className="text-sm font-bold text-dsc-text tracking-tight">AI DSC Dashboard</h1>
-            <p className="text-[10px] text-dsc-text-secondary">v4.2 Configuration Manager</p>
+            <Text size={300} weight="bold" block>AI DSC Dashboard</Text>
+            <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>v4.2 Configuration Manager</Text>
           </div>
         </div>
-        <button onClick={() => setOpen(false)} className="lg:hidden p-1 rounded-md hover:bg-dsc-border/30">
-          <X className="h-5 w-5 text-dsc-text-secondary" />
+        <button onClick={() => setOpen(false)} className={mergeClasses(styles.closeBtn, styles.mobileOnly)}>
+          <Dismiss20Regular />
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+      <nav className={styles.nav}>
         {visibleItems.map((item) => {
           const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
           return (
-            <Link key={item.href} href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive ? "bg-dsc-surface text-dsc-text shadow-sm border border-dsc-border/50" : "text-dsc-text-secondary hover:bg-dsc-surface/60 hover:text-dsc-text"
-              )}>
-              <item.icon className={cn("h-4 w-4", isActive ? item.color : "")} />
+            <Link
+              key={item.href}
+              href={item.href}
+              className={mergeClasses(styles.navItem, isActive && styles.navItemActive)}
+            >
+              <item.icon />
               {item.label}
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t border-dsc-border p-4">
-        <div className="flex items-center gap-2 text-xs text-dsc-text-secondary">
-          <div className="h-2 w-2 rounded-full bg-dsc-green pulse-dot" />
-          <span>System Healthy</span>
-        </div>
+      <div className={styles.footer}>
+        <CircleFilled style={{ color: "#7ECC9A", fontSize: 8 }} />
+        <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>System Healthy</Text>
       </div>
     </>
   );
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="fixed top-4 left-4 z-50 lg:hidden p-2 rounded-lg bg-dsc-surface border border-dsc-border shadow-sm" aria-label="Open navigation">
-        <Menu className="h-5 w-5 text-dsc-text" />
+      {/* Mobile hamburger */}
+      <button onClick={() => setOpen(true)} className={mergeClasses(styles.hamburger, styles.mobileOnly)} aria-label="Open navigation">
+        <Navigation20Regular />
       </button>
-      {open && <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden" onClick={() => setOpen(false)} />}
-      <aside className={cn("fixed left-0 top-0 z-50 flex h-screen w-60 flex-col border-r border-dsc-border bg-dsc-sidebar transition-transform duration-200 lg:hidden", open ? "translate-x-0" : "-translate-x-full")}>{sidebarContent}</aside>
-      <aside className="hidden lg:flex fixed left-0 top-0 z-30 h-screen w-60 flex-col border-r border-dsc-border bg-dsc-sidebar">{sidebarContent}</aside>
+
+      {/* Mobile overlay */}
+      {open && <div className={mergeClasses(styles.overlay, styles.mobileOnly)} onClick={() => setOpen(false)} />}
+
+      {/* Mobile sidebar */}
+      <aside className={mergeClasses(styles.sidebarMobile, open && styles.sidebarMobileOpen, styles.mobileOnly)}>
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside className={mergeClasses(styles.sidebar, styles.desktopOnly)}>
+        {sidebarContent}
+      </aside>
     </>
   );
 }

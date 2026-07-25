@@ -2,24 +2,125 @@
 
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
+import {
+  makeStyles,
+  tokens,
+  Text,
+  Button,
+  Input,
+  Field,
+  Select,
+  Spinner,
+  useToastController,
+  useId,
+  Toast,
+  ToastTitle,
+  Toaster,
+} from "@fluentui/react-components";
+import {
+  Server20Regular,
+  Add20Regular,
+  Search20Regular,
+  Delete20Regular,
+  Desktop20Regular,
+  Open20Regular,
+} from "@fluentui/react-icons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { StatusDot } from "@/components/ui/status-dot";
 import { EmptyState } from "@/components/ui/empty-state";
 import { timeAgo } from "@/lib/utils";
-import { Server, Plus, Search, Trash2, Monitor, ExternalLink } from "lucide-react";
-import toast from "react-hot-toast";
 import Link from "next/link";
 
+const useStyles = makeStyles({
+  page: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+  },
+  headerRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  createGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gap: "16px",
+  },
+  filterRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "12px",
+  },
+  nodeGrid: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  nodeRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  nodeLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
+  nodeIconBox: {
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: "#221830",
+    padding: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  nodeInfo: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  nameLine: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  badges: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginTop: "4px",
+  },
+  nodeRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
+  statCell: {
+    textAlign: "right",
+  },
+  actions: {
+    display: "flex",
+    gap: "4px",
+  },
+  formActions: {
+    display: "flex",
+    gap: "8px",
+    marginTop: "16px",
+  },
+});
+
 export default function NodesPage() {
+  const styles = useStyles();
   const { nodes, nodesLoading, fetchNodes, createNode, deleteNode } = useStore();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [platformFilter, setPlatformFilter] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [newNode, setNewNode] = useState({ name: "", hostname: "", platform: "WINDOWS", tags: "" });
+  const toasterId = useId("nodes-toaster");
+  const { dispatchToast } = useToastController(toasterId);
 
   useEffect(() => {
     const filters: Record<string, string> = {};
@@ -31,7 +132,7 @@ export default function NodesPage() {
 
   const handleCreate = async () => {
     if (!newNode.name || !newNode.hostname) {
-      toast.error("Name and hostname are required");
+      dispatchToast(<Toast><ToastTitle>Name and hostname are required</ToastTitle></Toast>, { intent: "error" });
       return;
     }
     try {
@@ -44,9 +145,9 @@ export default function NodesPage() {
       setShowCreate(false);
       setNewNode({ name: "", hostname: "", platform: "WINDOWS", tags: "" });
       fetchNodes();
-      toast.success("Node created");
+      dispatchToast(<Toast><ToastTitle>Node created</ToastTitle></Toast>, { intent: "success" });
     } catch {
-      toast.error("Failed to create node");
+      dispatchToast(<Toast><ToastTitle>Failed to create node</ToastTitle></Toast>, { intent: "error" });
     }
   };
 
@@ -55,21 +156,23 @@ export default function NodesPage() {
     try {
       await deleteNode(id);
       fetchNodes();
-      toast.success("Node deleted");
+      dispatchToast(<Toast><ToastTitle>Node deleted</ToastTitle></Toast>, { intent: "success" });
     } catch {
-      toast.error("Failed to delete node");
+      dispatchToast(<Toast><ToastTitle>Failed to delete node</ToastTitle></Toast>, { intent: "error" });
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className={styles.page}>
+      <Toaster toasterId={toasterId} />
+
+      <div className={styles.headerRow}>
         <div>
-          <h2 className="text-2xl font-bold text-dsc-text">Nodes</h2>
-          <p className="text-sm text-dsc-text-secondary mt-1">Managed machines and their compliance status</p>
+          <Text size={700} weight="bold" block>Nodes</Text>
+          <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>Managed machines and their compliance status</Text>
         </div>
-        <Button onClick={() => setShowCreate(!showCreate)}>
-          <Plus className="h-4 w-4" /> Add Node
+        <Button appearance="primary" icon={<Add20Regular />} onClick={() => setShowCreate(!showCreate)}>
+          Add Node
         </Button>
       </div>
 
@@ -77,96 +180,87 @@ export default function NodesPage() {
       {showCreate && (
         <Card>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Input label="Name" placeholder="Web Server 01" value={newNode.name} onChange={(e) => setNewNode({ ...newNode, name: e.target.value })} />
-              <Input label="Hostname" placeholder="web-01.contoso.com" value={newNode.hostname} onChange={(e) => setNewNode({ ...newNode, hostname: e.target.value })} />
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium text-dsc-text">Platform</label>
-                <select
-                  className="flex h-9 w-full rounded-lg border border-dsc-border bg-dsc-surface px-3 py-1 text-sm"
-                  value={newNode.platform}
-                  onChange={(e) => setNewNode({ ...newNode, platform: e.target.value })}
-                >
+            <div className={styles.createGrid}>
+              <Field label="Name">
+                <Input placeholder="Web Server 01" value={newNode.name} onChange={(e) => setNewNode({ ...newNode, name: (e.target as HTMLInputElement).value })} appearance="filled-darker" />
+              </Field>
+              <Field label="Hostname">
+                <Input placeholder="web-01.contoso.com" value={newNode.hostname} onChange={(e) => setNewNode({ ...newNode, hostname: (e.target as HTMLInputElement).value })} appearance="filled-darker" />
+              </Field>
+              <Field label="Platform">
+                <Select value={newNode.platform} onChange={(e) => setNewNode({ ...newNode, platform: (e.target as HTMLSelectElement).value })} appearance="filled-darker">
                   <option value="WINDOWS">Windows</option>
                   <option value="LINUX">Linux</option>
                   <option value="MACOS">macOS</option>
-                </select>
-              </div>
-              <Input label="Tags" placeholder="prod, web, iis" value={newNode.tags} onChange={(e) => setNewNode({ ...newNode, tags: e.target.value })} />
+                </Select>
+              </Field>
+              <Field label="Tags">
+                <Input placeholder="prod, web, iis" value={newNode.tags} onChange={(e) => setNewNode({ ...newNode, tags: (e.target as HTMLInputElement).value })} appearance="filled-darker" />
+              </Field>
             </div>
-            <div className="flex gap-2 mt-4">
-              <Button onClick={handleCreate}>Create Node</Button>
-              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+            <div className={styles.formActions}>
+              <Button appearance="primary" onClick={handleCreate}>Create Node</Button>
+              <Button appearance="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dsc-text-secondary" />
-          <input
-            type="text"
-            placeholder="Search nodes..."
-            className="h-9 w-full rounded-lg border border-dsc-border bg-dsc-surface pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-dsc-blue"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <select
-          className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
+      <div className={styles.filterRow}>
+        <Input
+          contentBefore={<Search20Regular />}
+          placeholder="Search nodes..."
+          value={search}
+          onChange={(e) => setSearch((e.target as HTMLInputElement).value)}
+          appearance="filled-darker"
+          style={{ width: 256 }}
+        />
+        <Select value={statusFilter} onChange={(e) => setStatusFilter((e.target as HTMLSelectElement).value)} appearance="filled-darker">
           <option value="">All Statuses</option>
           <option value="COMPLIANT">Compliant</option>
           <option value="DRIFTED">Drifted</option>
           <option value="ERROR">Error</option>
           <option value="UNKNOWN">Unknown</option>
           <option value="OFFLINE">Offline</option>
-        </select>
-        <select
-          className="h-9 rounded-lg border border-dsc-border bg-dsc-surface px-3 text-sm"
-          value={platformFilter}
-          onChange={(e) => setPlatformFilter(e.target.value)}
-        >
+        </Select>
+        <Select value={platformFilter} onChange={(e) => setPlatformFilter((e.target as HTMLSelectElement).value)} appearance="filled-darker">
           <option value="">All Platforms</option>
           <option value="WINDOWS">Windows</option>
           <option value="LINUX">Linux</option>
           <option value="MACOS">macOS</option>
-        </select>
+        </Select>
       </div>
 
       {/* Nodes List */}
       {nodesLoading && nodes.length === 0 ? (
-        <div className="space-y-3 animate-pulse">
-          {[1,2,3,4].map((i) => <div key={i} className="rounded-xl border border-dsc-border bg-dsc-surface p-6 h-20" />)}
+        <div style={{ display: "flex", justifyContent: "center", padding: 48 }}>
+          <Spinner size="large" label="Loading nodes..." />
         </div>
       ) : nodes.length === 0 ? (
         <EmptyState
-          icon={Server}
+          icon={Server20Regular}
           title="No nodes found"
           description="Add your first node to start managing its desired state configuration."
           actionLabel="Add Node"
           onAction={() => setShowCreate(true)}
         />
       ) : (
-        <div className="grid gap-3 stagger-children">
+        <div className={styles.nodeGrid}>
           {nodes.map((node) => (
             <Card key={node.id} hover>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-lg bg-dsc-blue-50 p-2.5">
-                    <Monitor className="h-5 w-5 text-dsc-blue" />
+              <div className={styles.nodeRow}>
+                <div className={styles.nodeLeft}>
+                  <div className={styles.nodeIconBox}>
+                    <Desktop20Regular style={{ color: "#B89ADA" }} />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-dsc-text">{node.name}</h3>
+                  <div className={styles.nodeInfo}>
+                    <div className={styles.nameLine}>
+                      <Text weight="semibold">{node.name}</Text>
                       <StatusDot status={node.status} pulse={node.status === "DRIFTED" || node.status === "ERROR"} />
                     </div>
-                    <p className="text-sm text-dsc-text-secondary">{node.hostname}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{node.hostname}</Text>
+                    <div className={styles.badges}>
                       <Badge variant={node.platform.toLowerCase() as "windows" | "linux" | "macos"}>
                         {node.platform}
                       </Badge>
@@ -179,26 +273,24 @@ export default function NodesPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-right text-sm">
-                    <p className="text-dsc-text-secondary">Last seen</p>
-                    <p className="font-medium text-dsc-text">{timeAgo(node.lastSeen)}</p>
+                <div className={styles.nodeRight}>
+                  <div className={styles.statCell}>
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Last seen</Text>
+                    <Text size={300} weight="medium" block>{timeAgo(node.lastSeen)}</Text>
                   </div>
-                  <div className="text-right text-sm">
-                    <p className="text-dsc-text-secondary">Configs</p>
-                    <p className="font-medium text-dsc-text">{node.configurations?.length || 0}</p>
+                  <div className={styles.statCell}>
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Configs</Text>
+                    <Text size={300} weight="medium" block>{node.configurations?.length || 0}</Text>
                   </div>
-                  <div className="text-right text-sm">
-                    <p className="text-dsc-text-secondary">Drift</p>
-                    <p className="font-medium text-dsc-text">{node._count?.driftEvents || 0}</p>
+                  <div className={styles.statCell}>
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Drift</Text>
+                    <Text size={300} weight="medium" block>{node._count?.driftEvents || 0}</Text>
                   </div>
-                  <div className="flex gap-1">
+                  <div className={styles.actions}>
                     <Link href={`/nodes/${node.id}`}>
-                      <Button variant="ghost" size="icon"><ExternalLink className="h-4 w-4" /></Button>
+                      <Button appearance="subtle" icon={<Open20Regular />} size="small" />
                     </Link>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(node.id, node.name)}>
-                      <Trash2 className="h-4 w-4 text-dsc-red" />
-                    </Button>
+                    <Button appearance="subtle" icon={<Delete20Regular style={{ color: "#F28B8B" }} />} size="small" onClick={() => handleDelete(node.id, node.name)} />
                   </div>
                 </div>
               </div>
@@ -209,4 +301,3 @@ export default function NodesPage() {
     </div>
   );
 }
-

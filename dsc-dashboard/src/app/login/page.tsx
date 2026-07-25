@@ -2,14 +2,68 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  makeStyles,
+  tokens,
+  Text,
+  Button,
+  Input,
+  Field,
+  MessageBar,
+  MessageBarBody,
+  MessageBarTitle,
+} from "@fluentui/react-components";
+import { PersonArrowRight20Regular, Warning20Regular } from "@fluentui/react-icons";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { LogIn, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+
+const useStyles = makeStyles({
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colorNeutralBackground1,
+    padding: "16px",
+  },
+  container: {
+    width: "100%",
+    maxWidth: "400px",
+  },
+  logoSection: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "12px",
+    marginBottom: "32px",
+  },
+  logoImg: {
+    height: "40px",
+    width: "40px",
+    borderRadius: tokens.borderRadiusXLarge,
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  footer: {
+    marginTop: "16px",
+    textAlign: "center",
+  },
+  link: {
+    color: tokens.colorBrandForeground1,
+    textDecoration: "none",
+    fontWeight: tokens.fontWeightMedium,
+    ":hover": {
+      textDecoration: "underline",
+    },
+  },
+});
 
 export default function LoginPage() {
   const router = useRouter();
+  const styles = useStyles();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -46,13 +100,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dsc-bg p-4">
-      <div className="w-full max-w-md">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <img src="/logo.svg" alt="AI DSC Dashboard" className="h-10 w-10 rounded-xl" />
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <div className={styles.logoSection}>
+          <img src="/logo.svg" alt="AI DSC Dashboard" className={styles.logoImg} />
           <div>
-            <h1 className="text-xl font-bold text-dsc-text">AI DSC Dashboard</h1>
-            <p className="text-xs text-dsc-text-secondary">Configuration Management</p>
+            <Text size={500} weight="bold" block>AI DSC Dashboard</Text>
+            <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Configuration Management</Text>
           </div>
         </div>
 
@@ -62,42 +116,54 @@ export default function LoginPage() {
             <CardDescription>Enter your credentials to access the dashboard</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <Input
-                id="email" label="Email" type="email" placeholder="you@company.com"
-                value={email} onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email" required
-              />
-              <Input
-                id="password" label="Password" type="password" placeholder="••••••••"
-                value={password} onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password" required
-              />
+            <form onSubmit={handleSubmit} className={styles.form}>
+              <Field label="Email" required>
+                <Input
+                  type="email"
+                  placeholder="you@company.com"
+                  value={email}
+                  onChange={(e) => setEmail((e.target as HTMLInputElement).value)}
+                  appearance="filled-darker"
+                />
+              </Field>
+              <Field label="Password" required>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword((e.target as HTMLInputElement).value)}
+                  appearance="filled-darker"
+                />
+              </Field>
 
               {error && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-dsc-red-50 border border-dsc-red/20 text-sm text-dsc-red">
-                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />{error}
-                </div>
+                <MessageBar intent="error">
+                  <MessageBarBody>{error}</MessageBarBody>
+                </MessageBar>
               )}
 
               {pendingApproval && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-dsc-yellow-50 border border-dsc-yellow/20 text-sm text-dsc-yellow">
-                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                  Your account is pending admin approval. You&apos;ll be able to log in once approved.
-                </div>
+                <MessageBar intent="warning">
+                  <MessageBarBody>
+                    Your account is pending admin approval. You&apos;ll be able to log in once approved.
+                  </MessageBarBody>
+                </MessageBar>
               )}
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                <LogIn className="h-4 w-4" />{loading ? "Signing in..." : "Sign In"}
+              <Button appearance="primary" type="submit" disabled={loading} icon={<PersonArrowRight20Regular />} style={{ width: "100%" }}>
+                {loading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 
-            <div className="mt-4 text-center text-sm text-dsc-text-secondary">
-              Don&apos;t have an account?{" "}
-              <Link href="/register" className="text-dsc-blue hover:underline font-medium">Create one</Link>
-            </div>
-            <div className="mt-2 text-center">
-              <Link href="/" className="text-xs text-dsc-text-secondary hover:underline">Continue as guest (demo data)</Link>
+            <div className={styles.footer}>
+              <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
+                Don&apos;t have an account?{" "}
+                <Link href="/register" className={styles.link}>Create one</Link>
+              </Text>
+              <br />
+              <Link href="/" style={{ marginTop: 8, display: "inline-block" }}>
+                <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Continue as guest (demo data)</Text>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -105,5 +171,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-

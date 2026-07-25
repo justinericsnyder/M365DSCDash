@@ -1,57 +1,241 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  makeStyles,
+  tokens,
+  Text,
+  Button,
+  Spinner,
+  useToastController,
+  useId,
+  Toast,
+  ToastTitle,
+  Toaster,
+} from "@fluentui/react-components";
+import {
+  Server20Regular,
+  Warning20Regular,
+  CheckmarkCircle20Regular,
+  Shield20Regular,
+  Database20Regular,
+  Cloud20Regular,
+  Bot20Regular,
+  ShieldCheckmark20Regular,
+  LockClosed20Regular,
+  DataTrending20Regular,
+  Pulse20Regular,
+  Globe20Regular,
+  People20Regular,
+  Key20Regular,
+} from "@fluentui/react-icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { StatusDot } from "@/components/ui/status-dot";
 import { Sparkline } from "@/components/ui/sparkline";
 import { timeAgo } from "@/lib/utils";
-import {
-  Server, AlertTriangle, CheckCircle2,
-  Shield, Database, Cloud, Bot, ShieldCheck, Lock,
-  TrendingUp, Activity, Gauge, Globe, Users, Key,
-} from "lucide-react";
-import toast from "react-hot-toast";
 import Link from "next/link";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Generate simulated historical trend data based on current value
-// In production this would come from a time-series table
 function generateTrend(current: number, days: number = 14): number[] {
   const points: number[] = [];
   let val = Math.max(current - 15 - Math.random() * 10, 30);
   for (let i = 0; i < days; i++) {
-    const drift = (Math.random() - 0.35) * 4; // slight upward bias
+    const drift = (Math.random() - 0.35) * 4;
     val = Math.min(100, Math.max(20, val + drift));
     points.push(Math.round(val * 10) / 10);
   }
-  points.push(current); // ensure last point is the real value
+  points.push(current);
   return points;
 }
 
 function pctColor(pct: number): string {
-  if (pct >= 90) return "text-dsc-green";
-  if (pct >= 70) return "text-dsc-yellow";
-  return "text-dsc-red";
+  if (pct >= 90) return "#7ECC9A";
+  if (pct >= 70) return "#E8D07A";
+  return "#F28B8B";
 }
 
 function pctBarColor(pct: number): string {
-  if (pct >= 90) return "bg-dsc-green";
-  if (pct >= 70) return "bg-dsc-yellow";
-  return "bg-dsc-red";
+  if (pct >= 90) return "#7ECC9A";
+  if (pct >= 70) return "#E8D07A";
+  return "#F28B8B";
 }
 
-function pctStrokeColor(pct: number): string {
-  if (pct >= 90) return "#38A169";
-  if (pct >= 70) return "#D69E2E";
-  return "#E53E3E";
-}
+const useStyles = makeStyles({
+  page: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+  },
+  headerSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+  },
+  overallCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "32px",
+  },
+  scoreSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    paddingRight: "32px",
+    borderRight: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  sourcesGrid: {
+    flex: 1,
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gap: "16px",
+  },
+  detailGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(480px, 1fr))",
+    gap: "24px",
+  },
+  progressBar: {
+    height: "8px",
+    borderRadius: "4px",
+    backgroundColor: `${tokens.colorNeutralStroke1}30`,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "8px",
+    borderRadius: "4px",
+    transitionProperty: "width",
+    transitionDuration: "300ms",
+  },
+  statsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(4, 1fr)",
+    gap: "8px",
+    textAlign: "center",
+  },
+  workloadRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    marginBottom: "8px",
+  },
+  thinBar: {
+    height: "6px",
+    borderRadius: "3px",
+    backgroundColor: `${tokens.colorNeutralStroke1}30`,
+    flex: 1,
+    overflow: "hidden",
+  },
+  thinFill: {
+    height: "6px",
+    borderRadius: "3px",
+  },
+  agentGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "12px",
+    marginBottom: "12px",
+  },
+  agentCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px",
+    borderRadius: tokens.borderRadiusMedium,
+  },
+  tenantGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+    gap: "12px",
+  },
+  tenantCell: {
+    textAlign: "center",
+    padding: "10px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  driftRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "12px 0",
+    borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
+    ":last-child": {
+      borderBottom: "none",
+    },
+  },
+  driftAlert: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px",
+    borderRadius: tokens.borderRadiusMedium,
+    backgroundColor: "#3A0E14",
+    border: "1px solid #F28B8B30",
+    textDecoration: "none",
+    color: "#F28B8B",
+  },
+  sourceLink: {
+    textDecoration: "none",
+    color: "inherit",
+    ":hover": {
+      "& > div": {
+        backgroundColor: tokens.colorSubtleBackgroundHover,
+      },
+    },
+  },
+  sourceInner: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "8px",
+    borderRadius: tokens.borderRadiusMedium,
+    transitionProperty: "background-color",
+    transitionDuration: "150ms",
+  },
+  iconBox: {
+    borderRadius: tokens.borderRadiusMedium,
+    padding: "6px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    height: "60vh",
+    textAlign: "center",
+  },
+  emptyIcon: {
+    borderRadius: "9999px",
+    backgroundColor: "#221830",
+    padding: "24px",
+    marginBottom: "24px",
+  },
+  labelRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "6px",
+    borderRadius: tokens.borderRadiusSmall,
+  },
+  labelColor: {
+    height: "12px",
+    width: "12px",
+    borderRadius: "2px",
+  },
+});
 
 export default function DashboardPage() {
+  const styles = useStyles();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const toasterId = useId("dashboard-toaster");
+  const { dispatchToast } = useToastController(toasterId);
 
   useEffect(() => {
     Promise.all([
@@ -73,18 +257,18 @@ export default function DashboardPage() {
         fetch("/api/agents/seed", { method: "POST" }),
         fetch("/api/purview/seed", { method: "POST" }),
       ]);
-      toast.success("All demo data loaded");
+      dispatchToast(<Toast><ToastTitle>All demo data loaded</ToastTitle></Toast>, { intent: "success" });
       window.location.reload();
-    } catch { toast.error("Seed failed"); }
+    } catch {
+      dispatchToast(<Toast><ToastTitle>Seed failed</ToastTitle></Toast>, { intent: "error" });
+    }
   };
 
   if (loading) return (
-    <div className="space-y-6 animate-pulse">
-      <div className="h-8 w-48 bg-dsc-border/30 rounded-lg" />
-      <div className="h-4 w-72 bg-dsc-border/20 rounded" />
-      <div className="rounded-xl border border-dsc-border bg-dsc-surface p-6 h-32" />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[1,2,3,4].map((i) => <div key={i} className="rounded-xl border border-dsc-border bg-dsc-surface p-6 h-28" />)}
+    <div className={styles.page}>
+      <Toaster toasterId={toasterId} />
+      <div style={{ display: "flex", justifyContent: "center", padding: "64px" }}>
+        <Spinner size="large" label="Loading dashboard..." />
       </div>
     </div>
   );
@@ -93,22 +277,25 @@ export default function DashboardPage() {
 
   if (!hasAnyData) {
     return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <div className="rounded-full bg-dsc-blue-50 p-6 mb-6"><Database className="h-12 w-12 text-dsc-blue" /></div>
-        <h2 className="text-2xl font-bold text-dsc-text mb-2">Welcome to AI DSC Dashboard</h2>
-        <p className="text-dsc-text-secondary max-w-md mb-8">Manage DSC configurations, M365 tenant compliance, Copilot agents, and Purview sensitivity labels from one place.</p>
-        <Button onClick={handleSeedAll} size="lg"><Database className="h-4 w-4" />Load All Demo Data</Button>
+      <div className={styles.emptyContainer}>
+        <Toaster toasterId={toasterId} />
+        <div className={styles.emptyIcon}>
+          <Database20Regular style={{ fontSize: 48, color: "#B89ADA" }} />
+        </div>
+        <Text size={700} weight="bold" block style={{ marginBottom: 8 }}>Welcome to AI DSC Dashboard</Text>
+        <Text size={400} style={{ color: tokens.colorNeutralForeground3, maxWidth: 400, marginBottom: 32 }} block>
+          Manage DSC configurations, M365 tenant compliance, Copilot agents, and Purview sensitivity labels from one place.
+        </Text>
+        <Button appearance="primary" size="large" icon={<Database20Regular />} onClick={handleSeedAll}>
+          Load All Demo Data
+        </Button>
       </div>
     );
   }
 
   const { infra, m365, agents, purview } = stats;
 
-  // ─── Compute aggregate percentages ────────────────────
-  // Infra: node compliance rate
   const infraPct = infra?.compliance?.rate ?? 0;
-
-  // M365: aggregate compliance across all workloads
   let m365Total = 0, m365Compliant = 0;
   if (m365?.workloads) {
     Object.values(m365.workloads as Record<string, { total: number; compliant: number }>).forEach((wl) => {
@@ -117,30 +304,18 @@ export default function DashboardPage() {
     });
   }
   const m365Pct = m365Total > 0 ? Math.round((m365Compliant / m365Total) * 100) : 0;
-
-  // Agents: % deployed (healthy governance = deployed / total)
-  const agentsPct = agents?.totals?.total > 0
-    ? Math.round((agents.totals.deployed / agents.totals.total) * 100)
-    : 0;
-
-  // Purview: % labels enabled with no drift
+  const agentsPct = agents?.totals?.total > 0 ? Math.round((agents.totals.deployed / agents.totals.total) * 100) : 0;
   const purviewLabelsTotal = purview?.labels?.total || 0;
   const purviewLabelsHealthy = (purview?.labels?.enabled || 0) - (purview?.drift?.unresolved || 0);
-  const purviewPct = purviewLabelsTotal > 0
-    ? Math.round((Math.max(0, purviewLabelsHealthy) / purviewLabelsTotal) * 100)
-    : 0;
+  const purviewPct = purviewLabelsTotal > 0 ? Math.round((Math.max(0, purviewLabelsHealthy) / purviewLabelsTotal) * 100) : 0;
 
-  // Overall aggregate
   const activeSources: number[] = [];
   if (infra?.nodes?.total > 0) activeSources.push(infraPct);
   if (m365Total > 0) activeSources.push(m365Pct);
   if (agents?.totals?.total > 0) activeSources.push(agentsPct);
   if (purviewLabelsTotal > 0) activeSources.push(purviewPct);
-  const overallPct = activeSources.length > 0
-    ? Math.round(activeSources.reduce((a, b) => a + b, 0) / activeSources.length)
-    : 0;
+  const overallPct = activeSources.length > 0 ? Math.round(activeSources.reduce((a, b) => a + b, 0) / activeSources.length) : 0;
 
-  // Sparkline data
   const overallTrend = generateTrend(overallPct);
   const infraTrend = generateTrend(infraPct);
   const m365Trend = generateTrend(m365Pct);
@@ -148,205 +323,203 @@ export default function DashboardPage() {
   const purviewTrend = generateTrend(purviewPct);
 
   return (
-    <div className="space-y-6 stagger-children">
-      <div className="animate-gravity-in">
-        <h2 className="text-2xl font-bold text-dsc-text">Dashboard</h2>
-        <p className="text-sm text-dsc-text-secondary mt-1.5 leading-relaxed">Unified view across infrastructure, M365, agents, and Purview</p>
+    <div className={styles.page}>
+      <Toaster toasterId={toasterId} />
+
+      <div className={styles.headerSection}>
+        <Text size={700} weight="bold">Dashboard</Text>
+        <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
+          Unified view across infrastructure, M365, agents, and Purview
+        </Text>
       </div>
 
-      {/* ─── Overall Health Summary ──────────────────────── */}
-      <Card className="border-dsc-border/60 bg-gradient-to-r from-dsc-surface to-dsc-bg animate-gravity-in">
-        <div className="flex items-center gap-8">
-          {/* Overall Score */}
-          <div className="flex items-center gap-4 pr-8 border-r border-dsc-border">
-            <div className="relative h-20 w-20">
-              <svg className="h-20 w-20 -rotate-90" viewBox="0 0 80 80">
-                <circle cx="40" cy="40" r="34" fill="none" stroke="#E2E8F0" strokeWidth="6" />
-                <circle cx="40" cy="40" r="34" fill="none" stroke={pctStrokeColor(overallPct)} strokeWidth="6"
+      {/* Overall Health */}
+      <Card>
+        <div className={styles.overallCard}>
+          <div className={styles.scoreSection}>
+            <div style={{ position: "relative", width: 80, height: 80 }}>
+              <svg style={{ width: 80, height: 80, transform: "rotate(-90deg)" }} viewBox="0 0 80 80">
+                <circle cx="40" cy="40" r="34" fill="none" stroke={`${tokens.colorNeutralStroke1}40`} strokeWidth="6" />
+                <circle cx="40" cy="40" r="34" fill="none" stroke={pctColor(overallPct)} strokeWidth="6"
                   strokeDasharray={`${(overallPct / 100) * 213.6} 213.6`} strokeLinecap="round" />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={`text-xl font-bold ${pctColor(overallPct)}`}>{overallPct}%</span>
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Text size={600} weight="bold" style={{ color: pctColor(overallPct) }}>{overallPct}%</Text>
               </div>
             </div>
             <div>
-              <p className="text-sm font-semibold text-dsc-text">Overall Health</p>
-              <p className="text-xs text-dsc-text-secondary">{activeSources.length} sources</p>
-              <Sparkline data={overallTrend} width={100} height={24} color={pctStrokeColor(overallPct)} fillColor={pctStrokeColor(overallPct)} className="mt-1" />
-              <p className="text-[10px] text-dsc-text-secondary mt-0.5">14-day trend</p>
+              <Text size={300} weight="semibold" block>Overall Health</Text>
+              <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{activeSources.length} sources</Text>
+              <Sparkline data={overallTrend} width={100} height={24} color={pctColor(overallPct)} fillColor={pctColor(overallPct)} />
+              <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>14-day trend</Text>
             </div>
           </div>
 
-          {/* Individual Source Aggregates */}
-          <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={styles.sourcesGrid}>
             {infra?.nodes?.total > 0 && (
-              <SourceAggregate label="Infrastructure" pct={infraPct} trend={infraTrend} icon={Server} href="/nodes" color="green" />
+              <SourceAggregate label="Infrastructure" pct={infraPct} trend={infraTrend} icon={Server20Regular} href="/nodes" bgColor="#18241C" iconColor="#7ECC9A" />
             )}
             {m365Total > 0 && (
-              <SourceAggregate label="M365 DSC" pct={m365Pct} trend={m365Trend} icon={Cloud} href="/m365" color="blue" />
+              <SourceAggregate label="M365 DSC" pct={m365Pct} trend={m365Trend} icon={Cloud20Regular} href="/m365" bgColor="#221830" iconColor="#B89ADA" />
             )}
             {agents?.totals?.total > 0 && (
-              <SourceAggregate label="Agent Registry" pct={agentsPct} trend={agentsTrend} icon={Bot} href="/agents" color="purple" sub={`${agents.totals.deployed}/${agents.totals.total} deployed`} />
+              <SourceAggregate label="Agent Registry" pct={agentsPct} trend={agentsTrend} icon={Bot20Regular} href="/agents" bgColor="#2D1B69" iconColor="#7C3AED" sub={`${agents.totals.deployed}/${agents.totals.total} deployed`} />
             )}
             {purviewLabelsTotal > 0 && (
-              <SourceAggregate label="Purview Labels" pct={purviewPct} trend={purviewTrend} icon={ShieldCheck} href="/purview" color="yellow" sub={`${purview.drift?.unresolved || 0} drift`} />
+              <SourceAggregate label="Purview Labels" pct={purviewPct} trend={purviewTrend} icon={ShieldCheckmark20Regular} href="/purview" bgColor="#2E2010" iconColor="#E8D07A" sub={`${purview.drift?.unresolved || 0} drift`} />
             )}
           </div>
         </div>
       </Card>
 
-      {/* ─── Detail Cards ────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 stagger-children">
-        {/* Infrastructure Compliance */}
+      {/* Detail Cards */}
+      <div className={styles.detailGrid}>
         {infra?.nodes?.total > 0 && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2"><Server className="h-4 w-4 text-dsc-green" />Infrastructure DSC</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Sparkline data={infraTrend} width={64} height={22} color={pctStrokeColor(infraPct)} fillColor={pctStrokeColor(infraPct)} />
-                  <span className={`text-lg font-bold ${pctColor(infraPct)}`}>{infraPct}%</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <CardTitle><span style={{ display: "flex", alignItems: "center", gap: 8 }}><Server20Regular style={{ color: "#7ECC9A" }} /> Infrastructure DSC</span></CardTitle>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Sparkline data={infraTrend} width={64} height={22} color={pctColor(infraPct)} fillColor={pctColor(infraPct)} />
+                  <Text size={500} weight="bold" style={{ color: pctColor(infraPct) }}>{infraPct}%</Text>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="h-2 rounded-full bg-dsc-border/30"><div className={`h-2 rounded-full ${pctBarColor(infraPct)} transition-all`} style={{ width: `${infraPct}%` }} /></div>
-                <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                  <div><p className="font-bold text-dsc-green">{infra.nodes.compliant}</p><p className="text-dsc-text-secondary">Compliant</p></div>
-                  <div><p className="font-bold text-dsc-yellow">{infra.nodes.drifted}</p><p className="text-dsc-text-secondary">Drifted</p></div>
-                  <div><p className="font-bold text-dsc-red">{infra.nodes.error}</p><p className="text-dsc-text-secondary">Error</p></div>
-                  <div><p className="font-bold">{infra.configurations.active}</p><p className="text-dsc-text-secondary">Configs</p></div>
-                </div>
-                {infra.drift?.unresolved > 0 && (
-                  <Link href="/drift" className="flex items-center gap-2 p-2 rounded-lg bg-dsc-red-50 border border-dsc-red/20 text-sm text-dsc-red hover:bg-dsc-red-50/80">
-                    <AlertTriangle className="h-4 w-4" />{infra.drift.unresolved} unresolved drift events
-                  </Link>
-                )}
+              <div className={styles.progressBar}>
+                <div className={styles.progressFill} style={{ width: `${infraPct}%`, backgroundColor: pctBarColor(infraPct) }} />
               </div>
+              <div className={styles.statsGrid} style={{ marginTop: 12 }}>
+                <div><Text weight="bold" style={{ color: "#7ECC9A" }}>{infra.nodes.compliant}</Text><br /><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Compliant</Text></div>
+                <div><Text weight="bold" style={{ color: "#E8D07A" }}>{infra.nodes.drifted}</Text><br /><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Drifted</Text></div>
+                <div><Text weight="bold" style={{ color: "#F28B8B" }}>{infra.nodes.error}</Text><br /><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Error</Text></div>
+                <div><Text weight="bold">{infra.configurations.active}</Text><br /><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Configs</Text></div>
+              </div>
+              {infra.drift?.unresolved > 0 && (
+                <Link href="/drift" className={styles.driftAlert} style={{ marginTop: 12 }}>
+                  <Warning20Regular /> {infra.drift.unresolved} unresolved drift events
+                </Link>
+              )}
             </CardContent>
           </Card>
         )}
 
-        {/* M365 DSC Workloads */}
         {m365?.workloads && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2"><Cloud className="h-4 w-4 text-dsc-blue" />M365 DSC Workloads</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Sparkline data={m365Trend} width={64} height={22} color={pctStrokeColor(m365Pct)} fillColor={pctStrokeColor(m365Pct)} />
-                  <span className={`text-lg font-bold ${pctColor(m365Pct)}`}>{m365Pct}%</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <CardTitle><span style={{ display: "flex", alignItems: "center", gap: 8 }}><Cloud20Regular style={{ color: "#B89ADA" }} /> M365 DSC Workloads</span></CardTitle>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Sparkline data={m365Trend} width={64} height={22} color={pctColor(m365Pct)} fillColor={pctColor(m365Pct)} />
+                  <Text size={500} weight="bold" style={{ color: pctColor(m365Pct) }}>{m365Pct}%</Text>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {Object.entries(m365.workloads as Record<string, { total: number; compliant: number; drifted: number }>).map(([key, wl]) => {
                   const pct = wl.total > 0 ? Math.round((wl.compliant / wl.total) * 100) : 100;
                   return (
-                    <div key={key} className="flex items-center gap-3">
-                      <span className="text-xs font-medium w-16 text-dsc-text-secondary">{key}</span>
-                      <div className="flex-1 h-1.5 rounded-full bg-dsc-border/30"><div className={`h-1.5 rounded-full ${pctBarColor(pct)}`} style={{ width: `${pct}%` }} /></div>
-                      <span className={`text-xs w-8 text-right font-medium ${pctColor(pct)}`}>{pct}%</span>
-                      {wl.drifted > 0 && <span className="text-[10px] text-dsc-red">{wl.drifted}d</span>}
+                    <div key={key} className={styles.workloadRow}>
+                      <Text size={200} weight="medium" style={{ width: 64, color: tokens.colorNeutralForeground3 }}>{key}</Text>
+                      <div className={styles.thinBar}><div className={styles.thinFill} style={{ width: `${pct}%`, backgroundColor: pctBarColor(pct) }} /></div>
+                      <Text size={200} weight="medium" style={{ width: 32, textAlign: "right", color: pctColor(pct) }}>{pct}%</Text>
+                      {wl.drifted > 0 && <Text size={100} style={{ color: "#F28B8B" }}>{wl.drifted}d</Text>}
                     </div>
                   );
                 })}
               </div>
-              <div className="mt-3 pt-3 border-t border-dsc-border flex items-center justify-between text-xs text-dsc-text-secondary">
-                <span>{m365Compliant}/{m365Total} resources compliant</span>
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${tokens.colorNeutralStroke1}` }}>
+                <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{m365Compliant}/{m365Total} resources compliant</Text>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Agent Registry Summary */}
         {agents?.totals && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2"><Bot className="h-4 w-4 text-purple-600" />Agent 365 Registry</CardTitle>
-                <div className="flex items-center gap-2">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <CardTitle><span style={{ display: "flex", alignItems: "center", gap: 8 }}><Bot20Regular style={{ color: "#7C3AED" }} /> Agent 365 Registry</span></CardTitle>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <Sparkline data={agentsTrend} width={64} height={22} color="#7C3AED" fillColor="#7C3AED" />
-                  <span className={`text-lg font-bold ${pctColor(agentsPct)}`}>{agentsPct}%</span>
-                  <span className="text-xs font-normal text-dsc-text-secondary">deployed</span>
+                  <Text size={500} weight="bold" style={{ color: pctColor(agentsPct) }}>{agentsPct}%</Text>
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>deployed</Text>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-dsc-blue-50"><Shield className="h-4 w-4 text-dsc-blue" /><div><p className="font-bold text-sm">{agents.totals.microsoft}</p><p className="text-[10px] text-dsc-text-secondary">Microsoft</p></div></div>
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-orange-50"><Activity className="h-4 w-4 text-orange-600" /><div><p className="font-bold text-sm">{agents.totals.external}</p><p className="text-[10px] text-dsc-text-secondary">External</p></div></div>
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-50"><Bot className="h-4 w-4 text-purple-600" /><div><p className="font-bold text-sm">{agents.totals.custom}</p><p className="text-[10px] text-dsc-text-secondary">Custom</p></div></div>
-                <div className="flex items-center gap-2 p-2 rounded-lg bg-dsc-green-50"><TrendingUp className="h-4 w-4 text-dsc-green" /><div><p className="font-bold text-sm">{agents.totals.shared}</p><p className="text-[10px] text-dsc-text-secondary">Shared</p></div></div>
+              <div className={styles.agentGrid}>
+                <div className={styles.agentCell} style={{ backgroundColor: "#221830" }}><Shield20Regular style={{ color: "#B89ADA" }} /><div><Text weight="bold" size={300}>{agents.totals.microsoft}</Text><br /><Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>Microsoft</Text></div></div>
+                <div className={styles.agentCell} style={{ backgroundColor: "#2E2010" }}><Pulse20Regular style={{ color: "#E8D07A" }} /><div><Text weight="bold" size={300}>{agents.totals.external}</Text><br /><Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>External</Text></div></div>
+                <div className={styles.agentCell} style={{ backgroundColor: "#2D1B69" }}><Bot20Regular style={{ color: "#7C3AED" }} /><div><Text weight="bold" size={300}>{agents.totals.custom}</Text><br /><Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>Custom</Text></div></div>
+                <div className={styles.agentCell} style={{ backgroundColor: "#18241C" }}><DataTrending20Regular style={{ color: "#7ECC9A" }} /><div><Text weight="bold" size={300}>{agents.totals.shared}</Text><br /><Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>Shared</Text></div></div>
               </div>
-              <div className="h-1.5 rounded-full bg-dsc-border/30 mb-2"><div className={`h-1.5 rounded-full ${pctBarColor(agentsPct)}`} style={{ width: `${agentsPct}%` }} /></div>
-              <div className="flex items-center justify-between text-xs text-dsc-text-secondary">
-                <span>{agents.totals.deployed}/{agents.totals.total} deployed · {agents.totals.pinned} pinned{agents.totals.blocked > 0 ? ` · ${agents.totals.blocked} blocked` : ""}{agents.totals.withRisks > 0 ? ` · ${agents.totals.totalRiskCount} risks` : ""}</span>
-              </div>
+              <div className={styles.progressBar}><div className={styles.progressFill} style={{ width: `${agentsPct}%`, backgroundColor: pctBarColor(agentsPct) }} /></div>
+              <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginTop: 8, display: "block" }}>
+                {agents.totals.deployed}/{agents.totals.total} deployed · {agents.totals.pinned} pinned{agents.totals.blocked > 0 ? ` · ${agents.totals.blocked} blocked` : ""}{agents.totals.withRisks > 0 ? ` · ${agents.totals.totalRiskCount} risks` : ""}
+              </Text>
             </CardContent>
           </Card>
         )}
 
-        {/* Purview Labels & Drift */}
         {purview?.labels && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-dsc-yellow" />Purview Sensitivity Labels</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Sparkline data={purviewTrend} width={64} height={22} color={pctStrokeColor(purviewPct)} fillColor={pctStrokeColor(purviewPct)} />
-                  <span className={`text-lg font-bold ${pctColor(purviewPct)}`}>{purviewPct}%</span>
-                  <span className="text-xs font-normal text-dsc-text-secondary">healthy</span>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <CardTitle><span style={{ display: "flex", alignItems: "center", gap: 8 }}><ShieldCheckmark20Regular style={{ color: "#E8D07A" }} /> Purview Sensitivity Labels</span></CardTitle>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Sparkline data={purviewTrend} width={64} height={22} color={pctColor(purviewPct)} fillColor={pctColor(purviewPct)} />
+                  <Text size={500} weight="bold" style={{ color: pctColor(purviewPct) }}>{purviewPct}%</Text>
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>healthy</Text>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-4 gap-2 text-center text-xs mb-3">
-                <div><p className="font-bold text-lg">{purview.labels.total}</p><p className="text-dsc-text-secondary">Labels</p></div>
-                <div><p className="font-bold text-lg text-dsc-blue">{purview.labels.withProtection}</p><p className="text-dsc-text-secondary">Encrypted</p></div>
-                <div><p className="font-bold text-lg text-orange-600">{purview.labels.withEndpointProtection}</p><p className="text-dsc-text-secondary">Endpoint DLP</p></div>
-                <div><p className="font-bold text-lg text-dsc-red">{purview.drift?.unresolved || 0}</p><p className="text-dsc-text-secondary">Drift</p></div>
+              <div className={styles.statsGrid} style={{ marginBottom: 12 }}>
+                <div><Text size={600} weight="bold">{purview.labels.total}</Text><br /><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Labels</Text></div>
+                <div><Text size={600} weight="bold" style={{ color: "#B89ADA" }}>{purview.labels.withProtection}</Text><br /><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Encrypted</Text></div>
+                <div><Text size={600} weight="bold" style={{ color: "#E8D07A" }}>{purview.labels.withEndpointProtection}</Text><br /><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Endpoint DLP</Text></div>
+                <div><Text size={600} weight="bold" style={{ color: "#F28B8B" }}>{purview.drift?.unresolved || 0}</Text><br /><Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Drift</Text></div>
               </div>
-              <div className="h-1.5 rounded-full bg-dsc-border/30 mb-2"><div className={`h-1.5 rounded-full ${pctBarColor(purviewPct)}`} style={{ width: `${purviewPct}%` }} /></div>
-              <div className="space-y-1 mb-2">
+              <div className={styles.progressBar}><div className={styles.progressFill} style={{ width: `${purviewPct}%`, backgroundColor: pctBarColor(purviewPct) }} /></div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
                 {purview.labelHierarchy?.slice(0, 4).map((l: any) => (
-                  <div key={l.id} className="flex items-center gap-2 p-1.5 rounded">
-                    <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: l.color || "#718096" }} />
-                    <span className="text-xs font-medium">{l.displayName}</span>
-                    {l.hasProtection && <Lock className="h-3 w-3 text-dsc-blue" />}
-                    {l.sublabels?.length > 0 && <span className="text-[10px] text-dsc-text-secondary">+{l.sublabels.length} sub</span>}
-                    {l._count?.driftEvents > 0 && <Badge variant="drifted" className="text-[9px] px-1 py-0">{l._count.driftEvents}</Badge>}
+                  <div key={l.id} className={styles.labelRow}>
+                    <div className={styles.labelColor} style={{ backgroundColor: l.color || "#718096" }} />
+                    <Text size={200} weight="medium">{l.displayName}</Text>
+                    {l.hasProtection && <LockClosed20Regular style={{ fontSize: 12, color: "#B89ADA" }} />}
+                    {l.sublabels?.length > 0 && <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>+{l.sublabels.length} sub</Text>}
+                    {l._count?.driftEvents > 0 && <Badge variant="drifted">{l._count.driftEvents}</Badge>}
                   </div>
                 ))}
               </div>
-              <div className="flex items-center justify-between text-xs text-dsc-text-secondary">
-                <span>{purview.labels.enabled} enabled · {purview.drift?.unresolved || 0} drift{purview.drift?.critical ? ` (${purview.drift.critical} critical)` : ""}</span>
-              </div>
+              <Text size={200} style={{ color: tokens.colorNeutralForeground3, marginTop: 8, display: "block" }}>
+                {purview.labels.enabled} enabled · {purview.drift?.unresolved || 0} drift{purview.drift?.critical ? ` (${purview.drift.critical} critical)` : ""}
+              </Text>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {/* ─── Tenant Live Data Overview ────────────────────── */}
+      {/* Tenant Live Data */}
       {m365?.workloads && (
-        <Card className="animate-gravity-in">
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Activity className="h-4 w-4 text-dsc-blue" />Tenant Live Data</CardTitle></CardHeader>
+        <Card>
+          <CardHeader><CardTitle><span style={{ display: "flex", alignItems: "center", gap: 8 }}><Pulse20Regular style={{ color: "#B89ADA" }} /> Tenant Live Data</span></CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 stagger-children">
+            <div className={styles.tenantGrid}>
               {[
-                { label: "Auth Methods", value: Object.values(m365.workloads as Record<string, {total: number}>).reduce((s, w) => s + w.total, 0) > 0 ? (m365.workloads as any).AAD?.total || 0 : 0, icon: Shield },
-                { label: "Domains", value: m365.resourceTypes?.find((r: any) => r.type === "AADDomain")?.count || 0, icon: Globe },
-                { label: "Teams", value: m365.resourceTypes?.find((r: any) => r.type === "TeamsTeam")?.count || 0, icon: Users },
-                { label: "Sites", value: m365.resourceTypes?.find((r: any) => r.type === "SPOSite")?.count || 0, icon: Globe },
-                { label: "Secure Score", value: (() => { const ss = m365.driftedResources?.find?.((r: any) => r.resourceType === "SecureScore") || m365.resourceTypes?.find((r: any) => r.type === "SecureScore"); return ss ? "✓" : "—"; })(), icon: ShieldCheck },
-                { label: "OAuth Grants", value: m365.resourceTypes?.find((r: any) => r.type === "CopilotOAuthConsent")?.count || 0, icon: Key },
+                { label: "Auth Methods", value: (m365.workloads as any).AAD?.total || 0, Icon: Shield20Regular },
+                { label: "Domains", value: m365.resourceTypes?.find((r: any) => r.type === "AADDomain")?.count || 0, Icon: Globe20Regular },
+                { label: "Teams", value: m365.resourceTypes?.find((r: any) => r.type === "TeamsTeam")?.count || 0, Icon: People20Regular },
+                { label: "Sites", value: m365.resourceTypes?.find((r: any) => r.type === "SPOSite")?.count || 0, Icon: Globe20Regular },
+                { label: "Secure Score", value: (() => { const ss = m365.driftedResources?.find?.((r: any) => r.resourceType === "SecureScore") || m365.resourceTypes?.find((r: any) => r.type === "SecureScore"); return ss ? "✓" : "—"; })(), Icon: ShieldCheckmark20Regular },
+                { label: "OAuth Grants", value: m365.resourceTypes?.find((r: any) => r.type === "CopilotOAuthConsent")?.count || 0, Icon: Key20Regular },
               ].map((item, i) => (
-                <div key={i} className="text-center p-2.5 rounded-lg bg-dsc-bg border border-dsc-border">
-                  <item.icon className="h-4 w-4 text-dsc-text-secondary mx-auto mb-1" />
-                  <p className="text-lg font-bold text-dsc-text">{item.value}</p>
-                  <p className="text-[9px] text-dsc-text-secondary">{item.label}</p>
+                <div key={i} className={styles.tenantCell}>
+                  <item.Icon style={{ color: tokens.colorNeutralForeground3, marginBottom: 4 }} />
+                  <Text size={500} weight="bold" block>{item.value}</Text>
+                  <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>{item.label}</Text>
                 </div>
               ))}
             </div>
@@ -357,25 +530,23 @@ export default function DashboardPage() {
       {/* Recent Drift */}
       {infra?.drift?.recent?.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-dsc-yellow" />Recent Infrastructure Drift</CardTitle></CardHeader>
+          <CardHeader><CardTitle><span style={{ display: "flex", alignItems: "center", gap: 8 }}><Warning20Regular style={{ color: "#E8D07A" }} /> Recent Infrastructure Drift</span></CardTitle></CardHeader>
           <CardContent>
-            <div className="divide-y divide-dsc-border">
-              {infra.drift.recent.slice(0, 5).map((event: any, i: number) => (
-                <div key={i} className="flex items-center justify-between py-3">
-                  <div className="flex items-center gap-3">
-                    <StatusDot status={event.severity} pulse={!event.resolved} />
-                    <div>
-                      <p className="text-sm font-medium">{event.node?.name || "Unknown"}</p>
-                      <p className="text-xs text-dsc-text-secondary">{(event.differingProperties || []).join(", ")}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={event.severity?.toLowerCase() as any}>{event.severity}</Badge>
-                    <span className="text-xs text-dsc-text-secondary">{timeAgo(event.createdAt)}</span>
+            {infra.drift.recent.slice(0, 5).map((event: any, i: number) => (
+              <div key={i} className={styles.driftRow}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <StatusDot status={event.severity} pulse={!event.resolved} />
+                  <div>
+                    <Text size={300} weight="medium" block>{event.node?.name || "Unknown"}</Text>
+                    <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{(event.differingProperties || []).join(", ")}</Text>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <Badge variant={event.severity?.toLowerCase() as any}>{event.severity}</Badge>
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{timeAgo(event.createdAt)}</Text>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}
@@ -383,32 +554,26 @@ export default function DashboardPage() {
   );
 }
 
-/* ─── Source Aggregate Card ────────────────────────────── */
-function SourceAggregate({ label, pct, trend, icon: Icon, href, color, sub }: {
-  label: string; pct: number; trend: number[]; icon: React.ElementType; href: string; color: string; sub?: string;
+/* Source Aggregate Card */
+function SourceAggregate({ label, pct, trend, icon: Icon, href, bgColor, iconColor, sub }: {
+  label: string; pct: number; trend: number[]; icon: React.ElementType; href: string; bgColor: string; iconColor: string; sub?: string;
 }) {
-  const colorMap: Record<string, { bg: string; text: string; stroke: string }> = {
-    green: { bg: "bg-dsc-green-50", text: "text-dsc-green", stroke: "#38A169" },
-    blue: { bg: "bg-dsc-blue-50", text: "text-dsc-blue", stroke: "#3182CE" },
-    purple: { bg: "bg-purple-50", text: "text-purple-600", stroke: "#7C3AED" },
-    yellow: { bg: "bg-dsc-yellow-50", text: "text-dsc-yellow", stroke: "#D69E2E" },
-  };
-  const c = colorMap[color] || colorMap.blue;
-
+  const styles = useStyles();
   return (
-    <Link href={href} className="group">
-      <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-dsc-bg transition-colors">
-        <div className={`rounded-lg ${c.bg} p-1.5`}><Icon className={`h-4 w-4 ${c.text}`} /></div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className={`text-lg font-bold ${pctColor(pct)}`}>{pct}%</span>
-            <Sparkline data={trend} width={48} height={16} color={c.stroke} />
+    <Link href={href} className={styles.sourceLink}>
+      <div className={styles.sourceInner}>
+        <div className={styles.iconBox} style={{ backgroundColor: bgColor }}>
+          <Icon style={{ color: iconColor }} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <Text size={500} weight="bold" style={{ color: pctColor(pct) }}>{pct}%</Text>
+            <Sparkline data={trend} width={48} height={16} color={iconColor} />
           </div>
-          <p className="text-[10px] text-dsc-text-secondary truncate">{label}</p>
-          {sub && <p className="text-[9px] text-dsc-text-secondary">{sub}</p>}
+          <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>{label}</Text>
+          {sub && <Text size={100} style={{ color: tokens.colorNeutralForeground3 }} block>{sub}</Text>}
         </div>
       </div>
     </Link>
   );
 }
-

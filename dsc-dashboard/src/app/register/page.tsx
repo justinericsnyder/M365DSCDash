@@ -1,13 +1,81 @@
 ﻿"use client";
 
 import { useState } from "react";
+import {
+  makeStyles,
+  tokens,
+  Text,
+  Button,
+  Input,
+  Field,
+  MessageBar,
+  MessageBarBody,
+} from "@fluentui/react-components";
+import {
+  PersonAdd20Regular,
+  CheckmarkCircle20Regular,
+  Shield20Regular,
+} from "@fluentui/react-icons";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { UserPlus, CheckCircle2, AlertTriangle, Shield } from "lucide-react";
 import Link from "next/link";
 
+const useStyles = makeStyles({
+  page: {
+    minHeight: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: tokens.colorNeutralBackground1,
+    padding: "16px",
+  },
+  container: {
+    width: "100%",
+    maxWidth: "400px",
+  },
+  logoSection: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "12px",
+    marginBottom: "32px",
+  },
+  logoImg: {
+    height: "40px",
+    width: "40px",
+    borderRadius: tokens.borderRadiusXLarge,
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  successCenter: {
+    padding: "32px 16px",
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  iconCircle: {
+    borderRadius: "9999px",
+    padding: "16px",
+    display: "inline-flex",
+    marginBottom: "16px",
+  },
+  footer: {
+    marginTop: "24px",
+    textAlign: "center",
+  },
+  link: {
+    color: tokens.colorBrandForeground1,
+    textDecoration: "none",
+    fontWeight: tokens.fontWeightMedium,
+    ":hover": { textDecoration: "underline" },
+  },
+});
+
 export default function RegisterPage() {
+  const styles = useStyles();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +103,6 @@ export default function RegisterPage() {
         body: JSON.stringify({ name, email, password }),
       });
       const data = await res.json();
-
       if (data.success) {
         setSuccess({ isFirstUser: data.isFirstUser, message: data.message });
       } else {
@@ -49,34 +116,40 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-dsc-bg p-4">
-      <div className="w-full max-w-md">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <img src="/logo.svg" alt="AI DSC Dashboard" className="h-10 w-10 rounded-xl" />
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <div className={styles.logoSection}>
+          <img src="/logo.svg" alt="AI DSC Dashboard" className={styles.logoImg} />
           <div>
-            <h1 className="text-xl font-bold text-dsc-text">AI DSC Dashboard</h1>
-            <p className="text-xs text-dsc-text-secondary">Configuration Management</p>
+            <Text size={500} weight="bold" block>AI DSC Dashboard</Text>
+            <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>Configuration Management</Text>
           </div>
         </div>
 
         {success ? (
           <Card>
-            <CardContent className="py-8 text-center">
-              {success.isFirstUser ? (
-                <>
-                  <div className="rounded-full bg-dsc-green-50 p-4 inline-block mb-4"><Shield className="h-8 w-8 text-dsc-green" /></div>
-                  <h3 className="text-lg font-bold text-dsc-text mb-2">Admin Account Created</h3>
-                  <p className="text-sm text-dsc-text-secondary mb-6">{success.message}</p>
-                  <Link href="/login"><Button>Sign In Now</Button></Link>
-                </>
-              ) : (
-                <>
-                  <div className="rounded-full bg-dsc-blue-50 p-4 inline-block mb-4"><CheckCircle2 className="h-8 w-8 text-dsc-blue" /></div>
-                  <h3 className="text-lg font-bold text-dsc-text mb-2">Account Created</h3>
-                  <p className="text-sm text-dsc-text-secondary mb-6">{success.message}</p>
-                  <Link href="/login"><Button variant="outline">Back to Sign In</Button></Link>
-                </>
-              )}
+            <CardContent>
+              <div className={styles.successCenter}>
+                {success.isFirstUser ? (
+                  <>
+                    <div className={styles.iconCircle} style={{ backgroundColor: "#18241C" }}>
+                      <Shield20Regular style={{ fontSize: 32, color: "#7ECC9A" }} />
+                    </div>
+                    <Text size={500} weight="bold" block style={{ marginBottom: 8 }}>Admin Account Created</Text>
+                    <Text size={300} style={{ color: tokens.colorNeutralForeground3, marginBottom: 24 }} block>{success.message}</Text>
+                    <Link href="/login"><Button appearance="primary">Sign In Now</Button></Link>
+                  </>
+                ) : (
+                  <>
+                    <div className={styles.iconCircle} style={{ backgroundColor: "#221830" }}>
+                      <CheckmarkCircle20Regular style={{ fontSize: 32, color: "#B89ADA" }} />
+                    </div>
+                    <Text size={500} weight="bold" block style={{ marginBottom: 8 }}>Account Created</Text>
+                    <Text size={300} style={{ color: tokens.colorNeutralForeground3, marginBottom: 24 }} block>{success.message}</Text>
+                    <Link href="/login"><Button appearance="outline">Back to Sign In</Button></Link>
+                  </>
+                )}
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -88,26 +161,36 @@ export default function RegisterPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Input id="name" label="Full Name" placeholder="Jane Smith" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required />
-                <Input id="email" label="Email" type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
-                <Input id="password" label="Password" type="password" placeholder="Min 10 chars, upper+lower+number+special" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" required />
-                <Input id="confirm" label="Confirm Password" type="password" placeholder="Repeat password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
+              <form onSubmit={handleSubmit} className={styles.form}>
+                <Field label="Full Name" required>
+                  <Input placeholder="Jane Smith" value={name} onChange={(e) => setName((e.target as HTMLInputElement).value)} appearance="filled-darker" />
+                </Field>
+                <Field label="Email" required>
+                  <Input type="email" placeholder="you@company.com" value={email} onChange={(e) => setEmail((e.target as HTMLInputElement).value)} appearance="filled-darker" />
+                </Field>
+                <Field label="Password" required>
+                  <Input type="password" placeholder="Min 10 chars, upper+lower+number+special" value={password} onChange={(e) => setPassword((e.target as HTMLInputElement).value)} appearance="filled-darker" />
+                </Field>
+                <Field label="Confirm Password" required>
+                  <Input type="password" placeholder="Repeat password" value={confirm} onChange={(e) => setConfirm((e.target as HTMLInputElement).value)} appearance="filled-darker" />
+                </Field>
 
                 {error && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-dsc-red-50 border border-dsc-red/20 text-sm text-dsc-red">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />{error}
-                  </div>
+                  <MessageBar intent="error">
+                    <MessageBarBody>{error}</MessageBarBody>
+                  </MessageBar>
                 )}
 
-                <Button type="submit" className="w-full" disabled={loading}>
-                  <UserPlus className="h-4 w-4" />{loading ? "Creating..." : "Create Account"}
+                <Button appearance="primary" type="submit" disabled={loading} icon={<PersonAdd20Regular />} style={{ width: "100%" }}>
+                  {loading ? "Creating..." : "Create Account"}
                 </Button>
               </form>
 
-              <div className="mt-6 text-center text-sm text-dsc-text-secondary">
-                Already have an account?{" "}
-                <Link href="/login" className="text-dsc-blue hover:underline font-medium">Sign in</Link>
+              <div className={styles.footer}>
+                <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>
+                  Already have an account?{" "}
+                  <Link href="/login" className={styles.link}>Sign in</Link>
+                </Text>
               </div>
             </CardContent>
           </Card>
@@ -116,5 +199,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-

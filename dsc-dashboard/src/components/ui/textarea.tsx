@@ -1,35 +1,51 @@
-import { cn } from "@/lib/utils";
+"use client";
+
+import {
+  Textarea as FluentTextarea,
+  Field,
+  type TextareaProps as FluentTextareaProps,
+} from "@fluentui/react-components";
 import { forwardRef } from "react";
 
-export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface TextareaProps extends Omit<FluentTextareaProps, "onChange"> {
   label?: string;
   error?: string;
+  onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, label, error, id, ...props }, ref) => (
-    <div className="space-y-1.5">
-      {label && (
-        <label htmlFor={id} className="text-sm font-medium text-dsc-text">
-          {label}
-        </label>
-      )}
-      <textarea
-        id={id}
-        className={cn(
-          "flex min-h-[120px] w-full rounded-lg border border-dsc-border bg-dsc-surface px-3 py-2 text-sm shadow-sm transition-colors",
-          "placeholder:text-dsc-text-secondary/60",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dsc-blue focus-visible:border-dsc-blue",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          error && "border-dsc-red focus-visible:ring-dsc-red",
-          className
-        )}
+  ({ label, error, id, onChange, ...props }, ref) => {
+    const handleChange: FluentTextareaProps["onChange"] = (ev, data) => {
+      if (onChange) {
+        onChange(ev as unknown as React.ChangeEvent<HTMLTextAreaElement>);
+      }
+    };
+
+    const textarea = (
+      <FluentTextarea
         ref={ref}
+        id={id}
+        appearance="filled-darker"
+        onChange={handleChange}
+        resize="vertical"
+        style={{ width: "100%", minHeight: 120 }}
         {...props}
       />
-      {error && <p className="text-xs text-dsc-red">{error}</p>}
-    </div>
-  )
+    );
+
+    if (label || error) {
+      return (
+        <Field
+          label={label}
+          validationMessage={error}
+          validationState={error ? "error" : undefined}
+        >
+          {textarea}
+        </Field>
+      );
+    }
+
+    return textarea;
+  }
 );
 Textarea.displayName = "Textarea";
-

@@ -1,10 +1,28 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Bell, LogOut, User, Shield, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { StatusDot } from "@/components/ui/status-dot";
+import {
+  makeStyles,
+  tokens,
+  Input,
+  Button,
+  Avatar,
+  Text,
+  Popover,
+  PopoverTrigger,
+  PopoverSurface,
+  MenuItem,
+  MenuList,
+  Divider,
+} from "@fluentui/react-components";
+import {
+  Search20Regular,
+  SignOut20Regular,
+  Person20Regular,
+  ShieldCheckmark20Regular,
+  ChevronDown20Regular,
+} from "@fluentui/react-icons";
 import Link from "next/link";
 
 interface SearchResult {
@@ -25,24 +43,104 @@ interface AuthUser {
   isApproved: boolean;
 }
 
+const useStyles = makeStyles({
+  header: {
+    position: "sticky",
+    top: 0,
+    zIndex: 20,
+    display: "flex",
+    height: "64px",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
+    backgroundColor: tokens.colorNeutralBackground2,
+    paddingLeft: "24px",
+    paddingRight: "24px",
+    backdropFilter: "blur(8px)",
+  },
+  searchWrapper: {
+    position: "relative",
+    width: "100%",
+    maxWidth: "400px",
+  },
+  searchResults: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    marginTop: "4px",
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: tokens.borderRadiusMedium,
+    border: `1px solid ${tokens.colorNeutralStroke1}`,
+    boxShadow: tokens.shadow16,
+    maxHeight: "320px",
+    overflowY: "auto",
+    zIndex: 50,
+  },
+  searchItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "10px 16px",
+    textDecoration: "none",
+    color: tokens.colorNeutralForeground1,
+    transitionProperty: "background-color",
+    transitionDuration: "150ms",
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    ":hover": {
+      backgroundColor: tokens.colorSubtleBackgroundHover,
+    },
+    ":last-child": {
+      borderBottom: "none",
+    },
+  },
+  rightSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  userButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "6px 8px",
+    borderRadius: tokens.borderRadiusMedium,
+    cursor: "pointer",
+    backgroundColor: "transparent",
+    border: "none",
+    color: tokens.colorNeutralForeground1,
+    ":hover": {
+      backgroundColor: tokens.colorSubtleBackgroundHover,
+    },
+  },
+  userInfo: {
+    textAlign: "left",
+    "@media (max-width: 639px)": {
+      display: "none",
+    },
+  },
+  noResults: {
+    padding: "16px",
+    textAlign: "center",
+  },
+});
+
 export function Header() {
   const router = useRouter();
+  const styles = useStyles();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [showMenu, setShowMenu] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
-  // Fetch current user
   useEffect(() => {
     fetch("/api/auth/me").then((r) => r.json()).then((data) => {
       if (data.authenticated) setUser(data.user);
     }).catch(() => {});
   }, []);
 
-  // Search debounce
   useEffect(() => {
     if (query.length < 2) { setResults([]); return; }
     const timer = setTimeout(async () => {
@@ -56,11 +154,9 @@ export function Header() {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Click outside to close
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) setShowResults(false);
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -69,7 +165,7 @@ export function Header() {
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setUser(null);
-    setShowMenu(false);
+    setMenuOpen(false);
     router.push("/login");
   };
 
@@ -78,94 +174,90 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-dsc-border bg-dsc-surface/90 backdrop-blur-sm px-4 lg:px-6">
-      {/* Search — hidden on small screens, compact on medium */}
-      <div className="relative w-full max-w-xs sm:max-w-sm lg:max-w-md ml-10 lg:ml-0" ref={searchRef}>
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dsc-text-secondary" />
-        <input
-          type="text"
+    <header className={styles.header}>
+      <div className={styles.searchWrapper} ref={searchRef}>
+        <Input
+          contentBefore={<Search20Regular />}
           placeholder="Search nodes, configs, resources, agents, labels..."
-          className="h-9 w-full rounded-lg border border-dsc-border bg-dsc-bg pl-9 pr-3 text-sm placeholder:text-dsc-text-secondary/60 focus:outline-none focus:ring-2 focus:ring-dsc-blue focus:border-dsc-blue transition-colors"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(_, data) => setQuery(data.value)}
           onFocus={() => results.length > 0 && setShowResults(true)}
+          appearance="filled-darker"
+          style={{ width: "100%" }}
         />
         {showResults && results.length > 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-dsc-surface rounded-lg border border-dsc-border shadow-lg max-h-80 overflow-y-auto z-50">
+          <div className={styles.searchResults}>
             {results.map((r) => (
               <Link
                 key={`${r.type}-${r.id}`}
                 href={r.href}
                 onClick={() => { setShowResults(false); setQuery(""); }}
-                className="flex items-center gap-3 px-4 py-2.5 hover:bg-dsc-bg transition-colors border-b border-dsc-border/50 last:border-0"
+                className={styles.searchItem}
               >
-                <span className="text-base">{typeIcons[r.type] || "📋"}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-dsc-text truncate">{r.title}</p>
-                  <p className="text-xs text-dsc-text-secondary truncate">{r.subtitle}</p>
+                <span style={{ fontSize: 16 }}>{typeIcons[r.type] || "📋"}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <Text size={300} weight="medium" block truncate>{r.title}</Text>
+                  <Text size={200} style={{ color: tokens.colorNeutralForeground3 }} block truncate>{r.subtitle}</Text>
                 </div>
-                {r.status && <StatusDot status={r.status} />}
-                {r.color && <div className="h-3 w-3 rounded-sm" style={{ backgroundColor: r.color }} />}
+                {r.color && <div style={{ height: 12, width: 12, borderRadius: 2, backgroundColor: r.color }} />}
               </Link>
             ))}
           </div>
         )}
         {showResults && query.length >= 2 && results.length === 0 && (
-          <div className="absolute top-full left-0 right-0 mt-1 bg-dsc-surface rounded-lg border border-dsc-border shadow-lg p-4 text-center text-sm text-dsc-text-secondary z-50">
-            No results for &ldquo;{query}&rdquo;
+          <div className={styles.searchResults}>
+            <div className={styles.noResults}>
+              <Text size={300} style={{ color: tokens.colorNeutralForeground3 }}>No results for &ldquo;{query}&rdquo;</Text>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center gap-3">
+      <div className={styles.rightSection}>
         {user ? (
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-dsc-bg transition-colors"
-            >
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#8B3A5C] to-[#B89ADA] flex items-center justify-center text-white text-xs font-bold">
-                {user.name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
-              </div>
-              <div className="text-left hidden sm:block">
-                <p className="text-sm font-medium text-dsc-text leading-tight">{user.name || user.email}</p>
-                <p className="text-[10px] text-dsc-text-secondary leading-tight flex items-center gap-1">
-                  {user.role === "ADMIN" && <Shield className="h-2.5 w-2.5" />}
-                  {user.role}
-                </p>
-              </div>
-              <ChevronDown className="h-3.5 w-3.5 text-dsc-text-secondary" />
-            </button>
-
-            {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-56 bg-dsc-surface rounded-lg border border-dsc-border shadow-lg z-50 py-1">
-                <div className="px-4 py-2 border-b border-dsc-border">
-                  <p className="text-sm font-medium text-dsc-text">{user.name}</p>
-                  <p className="text-xs text-dsc-text-secondary">{user.email}</p>
+          <Popover open={menuOpen} onOpenChange={(_, data) => setMenuOpen(data.open)}>
+            <PopoverTrigger disableButtonEnhancement>
+              <button className={styles.userButton}>
+                <Avatar
+                  name={user.name || user.email}
+                  size={32}
+                  color="brand"
+                />
+                <div className={styles.userInfo}>
+                  <Text size={300} weight="medium" block>{user.name || user.email}</Text>
+                  <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>{user.role}</Text>
                 </div>
-                <Link href="/settings" onClick={() => setShowMenu(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-dsc-text hover:bg-dsc-bg transition-colors">
-                  <User className="h-4 w-4" />Settings
-                </Link>
-                {user.role === "ADMIN" && (
-                  <Link href="/admin" onClick={() => setShowMenu(false)} className="flex items-center gap-2 px-4 py-2 text-sm text-dsc-text hover:bg-dsc-bg transition-colors">
-                    <Shield className="h-4 w-4" />Admin Panel
-                  </Link>
-                )}
-                <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-sm text-dsc-red hover:bg-dsc-red-50 transition-colors w-full text-left">
-                  <LogOut className="h-4 w-4" />Sign Out
-                </button>
+                <ChevronDown20Regular />
+              </button>
+            </PopoverTrigger>
+            <PopoverSurface style={{ padding: 0 }}>
+              <div style={{ padding: "12px 16px", borderBottom: `1px solid ${tokens.colorNeutralStroke1}` }}>
+                <Text size={300} weight="medium" block>{user.name}</Text>
+                <Text size={200} style={{ color: tokens.colorNeutralForeground3 }}>{user.email}</Text>
               </div>
-            )}
-          </div>
+              <MenuList>
+                <MenuItem icon={<Person20Regular />} onClick={() => { setMenuOpen(false); router.push("/settings"); }}>
+                  Settings
+                </MenuItem>
+                {user.role === "ADMIN" && (
+                  <MenuItem icon={<ShieldCheckmark20Regular />} onClick={() => { setMenuOpen(false); router.push("/admin"); }}>
+                    Admin Panel
+                  </MenuItem>
+                )}
+                <Divider />
+                <MenuItem icon={<SignOut20Regular />} onClick={handleLogout}>
+                  Sign Out
+                </MenuItem>
+              </MenuList>
+            </PopoverSurface>
+          </Popover>
         ) : (
-          <div className="flex items-center gap-2">
-            <Link href="/login"><Button variant="ghost" size="sm">Sign In</Button></Link>
-            <Link href="/register"><Button size="sm">Create Account</Button></Link>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link href="/login"><Button appearance="subtle">Sign In</Button></Link>
+            <Link href="/register"><Button appearance="primary">Create Account</Button></Link>
           </div>
         )}
       </div>
     </header>
   );
 }
-

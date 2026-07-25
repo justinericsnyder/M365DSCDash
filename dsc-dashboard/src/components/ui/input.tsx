@@ -1,35 +1,51 @@
-import { cn } from "@/lib/utils";
+"use client";
+
+import {
+  Input as FluentInput,
+  Field,
+  type InputProps as FluentInputProps,
+} from "@fluentui/react-components";
 import { forwardRef } from "react";
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<FluentInputProps, "onChange"> {
   label?: string;
   error?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, id, ...props }, ref) => (
-    <div className="space-y-1.5">
-      {label && (
-        <label htmlFor={id} className="text-sm font-medium text-dsc-text">
-          {label}
-        </label>
-      )}
-      <input
-        id={id}
-        className={cn(
-          "flex h-9 w-full rounded-lg border border-dsc-border bg-dsc-surface px-3 py-1 text-sm shadow-sm transition-colors",
-          "placeholder:text-dsc-text-secondary/60",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dsc-blue focus-visible:border-dsc-blue",
-          "disabled:cursor-not-allowed disabled:opacity-50",
-          error && "border-dsc-red focus-visible:ring-dsc-red",
-          className
-        )}
+  ({ label, error, id, onChange, ...props }, ref) => {
+    const handleChange: FluentInputProps["onChange"] = (ev, data) => {
+      if (onChange) {
+        // Create a synthetic event compatible with standard onChange
+        onChange(ev as unknown as React.ChangeEvent<HTMLInputElement>);
+      }
+    };
+
+    const input = (
+      <FluentInput
         ref={ref}
+        id={id}
+        appearance="filled-darker"
+        onChange={handleChange}
+        style={{ width: "100%" }}
         {...props}
       />
-      {error && <p className="text-xs text-dsc-red">{error}</p>}
-    </div>
-  )
+    );
+
+    if (label || error) {
+      return (
+        <Field
+          label={label}
+          validationMessage={error}
+          validationState={error ? "error" : undefined}
+        >
+          {input}
+        </Field>
+      );
+    }
+
+    return input;
+  }
 );
 Input.displayName = "Input";
-

@@ -1,42 +1,78 @@
-import { cn } from "@/lib/utils";
-import { cva, type VariantProps } from "class-variance-authority";
+"use client";
+
+import {
+  Button as FluentButton,
+  type ButtonProps as FluentButtonProps,
+} from "@fluentui/react-components";
 import { forwardRef } from "react";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-dsc-bg disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        primary: "bg-[#8B3A5C] text-white hover:bg-[#A04870] focus-visible:ring-[#8B3A5C] shadow-sm shadow-[#8B3A5C]/20",
-        danger: "bg-[#C53030] text-white hover:bg-[#E53E3E] focus-visible:ring-[#C53030] shadow-sm",
-        success: "bg-[#2F855A] text-white hover:bg-[#38A169] focus-visible:ring-[#2F855A] shadow-sm",
-        warning: "bg-[#B7791F] text-white hover:bg-[#D69E2E] focus-visible:ring-[#B7791F] shadow-sm",
-        outline: "border border-dsc-border bg-dsc-surface text-dsc-text hover:bg-dsc-border/30 hover:border-[#8B3A5C]/50 focus-visible:ring-[#8B3A5C]",
-        ghost: "text-dsc-text-secondary hover:bg-dsc-border/30 hover:text-dsc-text",
-        link: "text-[#D4789A] underline-offset-4 hover:underline hover:text-[#E8A0B8]",
-      },
-      size: {
-        sm: "h-8 px-3 text-xs",
-        md: "h-9 px-4",
-        lg: "h-11 px-6 text-base",
-        icon: "h-9 w-9",
-      },
-    },
-    defaultVariants: { variant: "primary", size: "md" },
-  }
-);
+/**
+ * App-level Button that maps legacy variants to Fluent UI appearances.
+ */
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+type AppVariant = "primary" | "danger" | "success" | "warning" | "outline" | "ghost" | "link";
+type AppSize = "sm" | "md" | "lg" | "icon";
+
+interface ButtonProps {
+  variant?: AppVariant;
+  size?: AppSize;
+  icon?: FluentButtonProps["icon"];
+  appearance?: FluentButtonProps["appearance"];
+  disabled?: boolean;
+  type?: "button" | "submit" | "reset";
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  className?: string;
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
+  "aria-label"?: string;
+}
+
+const variantToAppearance: Record<AppVariant, FluentButtonProps["appearance"]> = {
+  primary: "primary",
+  danger: "primary",
+  success: "primary",
+  warning: "primary",
+  outline: "outline",
+  ghost: "subtle",
+  link: "transparent",
+};
+
+const variantToStyle: Record<AppVariant, React.CSSProperties | undefined> = {
+  primary: undefined,
+  danger: { backgroundColor: "#C53030" },
+  success: { backgroundColor: "#2F855A" },
+  warning: { backgroundColor: "#B7791F" },
+  outline: undefined,
+  ghost: undefined,
+  link: undefined,
+};
+
+const sizeMap: Record<AppSize, FluentButtonProps["size"]> = {
+  sm: "small",
+  md: "medium",
+  lg: "large",
+  icon: "small",
+};
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => (
-    <button
-      className={cn(buttonVariants({ variant, size }), className)}
-      ref={ref}
-      {...props}
-    />
-  )
+  ({ variant = "primary", size = "md", style, icon, children, appearance: appearanceProp, ...props }, ref) => {
+    const appearance = appearanceProp || variantToAppearance[variant];
+    const variantStyle = variantToStyle[variant];
+    const fluentSize = sizeMap[size];
+    const iconOnly = size === "icon";
+
+    return (
+      <FluentButton
+        ref={ref}
+        appearance={appearance}
+        size={fluentSize}
+        icon={icon}
+        style={{ ...variantStyle, ...style, ...(iconOnly ? { minWidth: "32px", padding: "4px" } : {}) }}
+        {...props}
+      >
+        {children}
+      </FluentButton>
+    );
+  }
 );
 Button.displayName = "Button";
