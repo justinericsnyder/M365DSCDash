@@ -35,7 +35,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid email or password" }, { status: 400, headers });
     }
 
-    const { email, password } = parsed.data;
+    const { email: rawEmail, password } = parsed.data;
+
+    // Unicode-normalize to prevent homoglyph bypass
+    const email = rawEmail.normalize("NFKC").toLowerCase().trim();
+
+    // Reject emails with non-ASCII in local part
+    const [localPart, domain] = email.split("@");
+    if (!localPart || !domain || /[^\x20-\x7E]/.test(localPart)) {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 400, headers });
+    }
 
     // Check account lockout
     const locked = await isAccountLocked(email);
@@ -47,7 +56,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Find user — always run password check to prevent timing-based user enumeration
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    const user = await prisma.user.findUnique({ where: { email } });
 
     const ua = req.headers.get("user-agent") || "unknown";
 
@@ -56,7 +65,7 @@ export async function POST(req: NextRequest) {
       const { hash } = await import("bcryptjs");
       await hash("dummy-password-timing-safe", 4);
       await recordFailedLogin(email);
-      writeAuditLog({ action: "LOGIN_FAILED", email: email.toLowerCase(), ipAddress: ip, userAgent: ua, details: "User not found", success: false });
+      writeAuditLog({ action: "LOGIN_FAILED", email, ipAddress: ip, userAgent: ua, details: "User not found", success: false });
       return NextResponse.json({ error: "Invalid email or password" }, { status: 401, headers });
     }
 

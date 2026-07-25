@@ -32,7 +32,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400, headers });
     }
 
-    const { name, email, password } = parsed.data;
+    const { name, email: rawEmail, password } = parsed.data;
+
+    // Unicode-normalize and sanitize email to prevent homoglyph bypass
+    const email = rawEmail.normalize("NFKC").toLowerCase().trim();
+
+    // Reject emails with non-ASCII characters in the local part (prevent homoglyph attacks)
+    const [localPart, domain] = email.split("@");
+    if (!localPart || !domain || /[^\x20-\x7E]/.test(localPart)) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400, headers });
+    }
 
     // Strong password validation
     const pwError = validatePasswordStrength(password);
@@ -40,8 +49,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: pwError }, { status: 400, headers });
     }
 
-    // Check if email already exists (use generic error to prevent enumeration)
-    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    // Check if email already exists
+    const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return NextResponse.json(
         { error: "Unable to create account. If you already have an account, try signing in." },
@@ -58,7 +67,7 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.create({
       data: {
         name,
-        email: email.toLowerCase(),
+        email,
         passwordHash,
         role: isFirstUser ? "ADMIN" : "PENDING",
         isApproved: isFirstUser,
@@ -66,7 +75,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    console.log(`[AUDIT] User registered: ${email.toLowerCase()} role=${isFirstUser ? "ADMIN" : "PENDING"} from IP ${ip}`);
+    console.log(`[AUDIT] User registered: ${email} role=${isFirstUser ? "ADMIN" : "PENDING"} from IP ${ip}`);
     writeAuditLog({ action: "REGISTER", userId: user.id, email: user.email, ipAddress: ip, userAgent: req.headers.get("user-agent") || undefined, details: `Role: ${isFirstUser ? "ADMIN" : "PENDING"}` });
 
     return NextResponse.json({
