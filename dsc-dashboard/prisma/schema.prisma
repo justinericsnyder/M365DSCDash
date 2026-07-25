@@ -57,6 +57,12 @@ model AppSettings {
   updatedAt DateTime @updatedAt
 }
 
+model SiteSettings {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
 model M365Tenant {
   id              String   @id @default(cuid())
   tenantId        String   @unique

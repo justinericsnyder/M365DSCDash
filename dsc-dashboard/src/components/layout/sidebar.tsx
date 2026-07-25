@@ -25,6 +25,7 @@ import {
   Sparkle20Regular,
   Apps20Regular,
   CircleFilled,
+  ShieldError20Regular,
 } from "@fluentui/react-icons";
 
 interface NavItem {
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { href: "/configurations", label: "Configurations", icon: Document20Regular, flag: "showConfigurations" },
   { href: "/resources", label: "Resources", icon: Apps20Regular },
   { href: "/drift", label: "Drift Events", icon: Warning20Regular },
+  { href: "/cve-tracker", label: "CVE Tracker", icon: ShieldError20Regular },
   { href: "/import", label: "Import", icon: ArrowUpload20Regular, flag: "showImport" },
   { href: "/settings", label: "Settings", icon: Settings20Regular },
   { href: "/changelog", label: "Changelog", icon: History20Regular },
