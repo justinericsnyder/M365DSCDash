@@ -218,7 +218,7 @@ export function Sidebar() {
           <img src="/logo.svg" alt="AI DSC Dashboard" className={styles.logoImg} />
           <div>
             <Text size={300} weight="bold" block>AI DSC Dashboard</Text>
-            <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>v4.2 Configuration Manager</Text>
+            <Text size={100} style={{ color: tokens.colorNeutralForeground3 }}>v4.5 Configuration Manager</Text>
           </div>
         </div>
         <button onClick={() => setOpen(false)} className={mergeClasses(styles.closeBtn, styles.mobileOnly)}>
