@@ -12,6 +12,62 @@ All notable changes to this project are documented here.
 
 ---
 
+## 🔒 v4.5.0 — Auth Hardening: Unicode Homoglyph Fix
+<sub>July 25, 2026</sub>
+
+### 🔐 Security
+- Added NFKC Unicode normalization on email inputs before validation and database lookup
+- Reject non-ASCII characters in the email local part to prevent homoglyph `@` bypass attacks
+- Applied consistently in both login and registration routes
+- Mitigates a class of vulnerability similar to Auth.js email normalizer bypass
+
+---
+
+## 🛡️ v4.4.0 — CVE Tracker & Vulnerability Management
+<sub>July 25, 2026</sub>
+
+### ✨ Features
+- New `/cve-tracker` page for monitoring and triaging dependency vulnerabilities
+- **Multi-source scanning** — OSV.dev, GitHub Advisory Database, npm audit, and AVID (AI Vulnerability Database)
+- **Real-time advisory feed** — recent npm/AI advisories with 24h/72h toggle
+- **AI-powered triage assistant** — Claude-based chat widget with contextual vulnerability analysis
+- **Manual CVE addition** — add custom entries via modal form
+- **Triage workflow** — status management (new → triaging → mitigated/patched/accepted/false-positive)
+- **Impact tracking** — map vulnerabilities to specific app areas
+- **Comment threads** — per-CVE discussion with author and timestamp
+- **AI actions** — Claude can add comments, change status, and set impact assessments inline
+
+### 🏗️ Architecture
+- CVE data stored in `SiteSettings` key-value table (single JSON row, no complex migrations)
+- Additive scanning — never overwrites existing triage state
+- Deduplication across sources using `cveId::packageName` composite key
+- Graceful fallback when `SiteSettings` table doesn't exist yet
+- Added `@anthropic-ai/sdk` dependency
+- Added `prisma generate` to build script for Vercel deployments
+
+---
+
+## 🎨 v4.3.1 — Fluent UI Design System Migration
+<sub>July 25, 2026</sub>
+
+### 🎨 Design System
+- Migrated from Tailwind + Radix UI to **Microsoft Fluent UI v9** as the primary design system
+- Custom `crimsonDarkTheme` mapping existing crimson-mauve palette to Fluent UI tokens
+- `FluentProvider` wrapping the entire application at root layout level
+- Griffel CSS-in-JS (`makeStyles`) replaces utility classes in all converted components
+
+### 🧩 Components Rebuilt
+- **Layout:** Sidebar and Header fully rewritten with Fluent UI navigation patterns, `Avatar`, `Popover`, `MenuList`
+- **UI Library:** Card, Badge (17 variants), Button, Input, Textarea, Modal (→ `Dialog`), EmptyState, StatusDot, Sparkline
+- **Pages converted:** Dashboard, Nodes, Configurations, Drift, Settings, Login, Register
+
+### 📦 Dependencies
+- Added: `@fluentui/react-components`, `@fluentui/react-icons`, `@griffel/react`
+- Removed: `@radix-ui/*` (7 packages), `class-variance-authority`, `clsx`, `tailwind-merge`
+- Kept Tailwind + lucide-react for transitional compatibility on unconverted pages
+
+---
+
 ## 🚀 v4.3.0 — Documentation & Portfolio
 <sub>April 19, 2026</sub>
 
